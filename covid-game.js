@@ -33,7 +33,7 @@ class Region {
     }
 }
 
-function random_region() {
+function region_100k_u0_9_infected() {
     total = 100000
     I = Math.round(10 * Math.random())
     R = 0
@@ -125,10 +125,10 @@ function count_infected(Regions){
 Regions = []
 
 for (let n = 0; n < 120; n++) {
-    Regions.push(random_region())
+    Regions.push(region_100k_u0_9_infected())
 }
 
-connect_regions_randomly(Regions, 2)
+connect_regions_randomly(Regions, 2000)
 
 for (let n = 0; n < 30; n++) {
     console.log(count_infected(Regions))
