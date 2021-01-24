@@ -165,35 +165,39 @@ function count_infected(Regions){
     return infected
 }
 
-Regions = []
+function self_test() {
+    Regions = []
 
-for (let n = 0; n < 120; n++) {
-    Regions.push(region_100k_u0_9_infected())
-}
-
-connect_regions_randomly(Regions, 2000)
-
-c_measures = Array()
-c_measures.push(new Measures(true, false,false,false,
-    false, false, false))
-c_measures.push(new Measures(false, true,false,false,
-    false, false, false))
-c_measures.push(new Measures(false, false,true,false,
-    false, false, false))
-c_measures.push(new Measures(false, false,false,true,
-    false, false, false))
-c_measures.push(new Measures(false, false,false,false,
-    true, false, false))
-
-
-let count = 0
-let measure_now = c_measures[0]
-for (let n = 0; n < 30; n++) {
-    if (n % 7==0) {
-        measure_now = c_measures[count];
-        count++;
-        console.log(measure_now)
+    for (let n = 0; n < 120; n++) {
+        Regions.push(region_100k_u0_9_infected())
     }
-    step_epidemic(Regions, 0.01, measure_now)
-    console.log(count_infected(Regions))
+
+    connect_regions_randomly(Regions, 2000)
+
+    c_measures = Array()
+    c_measures.push(new Measures(true, false,false,false,
+        false, false, false))
+    c_measures.push(new Measures(false, true,false,false,
+        false, false, false))
+    c_measures.push(new Measures(false, false,true,false,
+        false, false, false))
+    c_measures.push(new Measures(false, false,false,true,
+        false, false, false))
+    c_measures.push(new Measures(false, false,false,false,
+        true, false, false))
+
+
+    let count = 0
+    let measure_now = c_measures[0]
+    for (let n = 0; n < 30; n++) {
+        if (n % 7==0) {
+            measure_now = c_measures[count];
+            count++;
+            console.log(measure_now)
+        }
+        step_epidemic(Regions, 0.01, measure_now)
+        console.log(count_infected(Regions))
+    }
 }
+
+self_test();
