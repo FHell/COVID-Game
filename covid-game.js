@@ -78,15 +78,6 @@ function connect_regions_randomly(Regions) {
     }
 }
 
-// The array neighbours contains references to the objects in the regions array:
-//
-// r = [region_u0_9_infected(100), region_u0_9_infected(101)]
-// r[0].neighbours.push(r[1])
-// r[1].neighbours.push(r[0]) 
-// r[0].neighbours[0].R = 30
-// console.log(r[1].R) // == 30
-
-
 function local_SIR_step(reg, infect, recov) {
     let delta_I = 0 // newly infected
     let delta_R = 0 // newly recovered
@@ -165,35 +156,39 @@ function count_infected(Regions){
     return infected
 }
 
-Regions = []
+function self_test() {
+    Regions = []
 
-for (let n = 0; n < 120; n++) {
-    Regions.push(region_100k_u0_9_infected())
-}
-
-connect_regions_randomly(Regions, 2000)
-
-c_measures = Array()
-c_measures.push(new Measures(true, false,false,false,
-    false, false, false))
-c_measures.push(new Measures(false, true,false,false,
-    false, false, false))
-c_measures.push(new Measures(false, false,true,false,
-    false, false, false))
-c_measures.push(new Measures(false, false,false,true,
-    false, false, false))
-c_measures.push(new Measures(false, false,false,false,
-    true, false, false))
-
-
-let count = 0
-let measure_now = c_measures[0]
-for (let n = 0; n < 30; n++) {
-    if (n % 7==0) {
-        measure_now = c_measures[count];
-        count++;
-        console.log(measure_now)
+    for (let n = 0; n < 120; n++) {
+        Regions.push(region_100k_u0_9_infected())
     }
-    step_epidemic(Regions, 0.01, measure_now)
-    console.log(count_infected(Regions))
+
+    connect_regions_randomly(Regions, 2000)
+
+    c_measures = Array()
+    c_measures.push(new Measures(true, false,false,false,
+        false, false, false))
+    c_measures.push(new Measures(false, true,false,false,
+        false, false, false))
+    c_measures.push(new Measures(false, false,true,false,
+        false, false, false))
+    c_measures.push(new Measures(false, false,false,true,
+        false, false, false))
+    c_measures.push(new Measures(false, false,false,false,
+        true, false, false))
+
+
+    let count = 0
+    let measure_now = c_measures[0]
+    for (let n = 0; n < 30; n++) {
+        if (n % 7==0) {
+            measure_now = c_measures[count];
+            count++;
+            console.log(measure_now)
+        }
+        step_epidemic(Regions, 0.01, measure_now)
+        console.log(count_infected(Regions))
+    }
 }
+
+//self_test();
