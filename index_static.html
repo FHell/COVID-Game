@@ -15,10 +15,6 @@
 <script src="covid-game.js"></script>
 
 <script>
-
-
-
-
 // The svg
 var svg = d3.select("svg"),
   width = +svg.attr("width"),
@@ -34,13 +30,18 @@ var projection = d3.geoMercator()
 // Data and color scale
 var data = d3.map();
 var colorScale = d3.scaleThreshold()
-  .domain([100000, 1000000, 10000000, 30000000, 100000000, 500000000])
+  .domain([25, 50, 100, 150, 200, 300])
   .range(d3.schemeBlues[7]);
 
+
+var incidence = [];
 // Load external data and boot
 d3.queue()
   //.defer(d3.json, "bundeslaender_simplify200.geojson")
   .defer(d3.json, "landkreise_simplify200.geojson")
+  .defer(d3.csv, "7T_Inzidenz_LK_22_1.csv", function(d) {  
+      incidence.push({ name: d.Landkreis, tag: d.LKNR, active: d.Anzahl, inc: d.Inzidenz })
+  })
   .await(start_sim);
 
 
@@ -55,12 +56,12 @@ function draw_map(topo, fill_fn) {
 }
 
 var step_no = 0;
-function step(topo) {
+function step(topo, regions) {
     step_no = step_no % 1000 + 1;
-    draw_map(topo, function (d) {
-              //d.total = data.get(d.id) || 0;
-              d.total = step_no * 100000;
-              return colorScale(d.total);
+    draw_map(topo, function (f) {
+              let ctag = f.properties.AGS;
+              let cr = regions.find(e => e.tag == ctag);
+              return colorScale(cr.I);
         });
 }
 
@@ -68,11 +69,25 @@ function start_sim(error, topo) {
   console.log(topo);
   step_no = 0;
   //setInterval(step, 1000, topo);
-  step(topo);
-
+  
   var regions = []
-  var r = new Region(10, 2, 4, 16, "BER");
+  topo.features.forEach(e => { 
+    let ctag = e.properties.AGS;
+    let incr = incidence.find(e => e.tag == ctag);
+    let inc = 115;
+    if (incr == null)  {
+      console.log("No match for LK #", ctag, " (", e.properties.GEN, ") => set to default ", inc);
+    } else {
+      inc = incr.inc;
+    }
 
+    regions.push(region_with_incidence(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN));
+  });
+
+  console.log(regions);
+  step(topo, regions);
+
+  console.log("done");
 }
 
 </script>
