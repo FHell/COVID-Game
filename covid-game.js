@@ -45,9 +45,15 @@ function region_u0_9_infected(total, tag) {
     I = Math.round(10 * Math.random())
     R = 0
     S = total - I   
-    return new Region(S, I, R, total)
+    return new Region(S, I, R, total, tag)
 }
 
+function region_with_incidence(total, incidence, tag) {
+    I = incidence / 100000 * total
+    R = 0
+    S = total - I   
+    return new Region(S, I, R, total, tag)
+}
 
 function connect_regions_randomly(Regions, n_edges) {
     let n_reg = Regions.length
