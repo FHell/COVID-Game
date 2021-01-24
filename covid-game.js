@@ -28,6 +28,7 @@ class Region {
         this.I = N_I
         this.R = N_R
         this.total = N_total
+        this.ttin = 0 // total traveling infected neighbours
         this.tag = tag
         this.name = name
         this.neighbours = Array() // Needs to be populated later
@@ -69,15 +70,11 @@ function region_with_incidence(total, incidence, tag, name) {
     return new Region(S, I, R, total, tag, name)
 }
 
-function connect_regions_randomly(Regions, n_edges) {
+function connect_regions_randomly(Regions) {
     let n_reg = Regions.length
-    for (let n = 0; n < n_edges; n++) {
-        n_1 = Math.floor(Math.random() * n_reg)
-        n_2 = Math.floor(Math.random() * n_reg)
-        if (n_1 != n_2) {
-            Regions[n_1].neighbours.push(Regions[n_2])
-            Regions[n_2].neighbours.push(Regions[n_1]) 
-        }
+    for (reg of Regions){
+        for (let n = 0; n < n_reg; n++)
+            reg.neighbours.push({dist: Math.random() * 500, index: n})
     }
 }
 
@@ -94,8 +91,9 @@ function local_SIR_step(reg, infect, recov) {
     let delta_I = 0 // newly infected
     let delta_R = 0 // newly recovered
 
-    // every infected has chance infect to infect a random person if that person is susceptible
-    for (let n = 0; n < reg.I; n++) {
+    // every infected, and everyone traveling to the region
+    // has chance infect to infect a random person if that person is susceptible
+    for (let n = 0; n < reg.I + reg.ttin ; n++) {
         if (Math.random() < infect * reg.S / reg.total) {delta_I++}
     }
 
@@ -129,24 +127,21 @@ function calc_local_params(reg, curr_measure, recov = 1/10, r = 3.0){
 
 function step_epidemic(Regions, travel, curr_measures) {
 
-    // We first run the epidemic locally, then we travel
+    // travel is the fraction of people from a region that travel to a neighbouring region
+    // in our first approximation these are simply all regions within 100km and travel is a constant fraction.
+    // these people cause infections at the place they travel to as well as at home.
+    for (reg of Regions) {
+        reg.ttin = 0
+        for (nei of reg.neighbours){
+            if (nei.dist < 100 && reg != Regions[nei.index]) {reg.ttin += Math.round(travel * Regions[nei.index].I)}
+        }
+    }
+
     for (reg of Regions) {
         let pars = calc_local_params(reg, curr_measures);
         local_SIR_step(reg, pars[0], pars[1])
     }
 
-    for (reg of Regions) {
-        // For every nighbour we have probability for a random person to travel there
-        for (nei of reg.neighbours) {
-            if (Math.random() < travel) {
-                r = Math.random() * reg.total
-                if (reg.S < r) {reg.S--; nei.S++}
-                else if (reg.S + reg.I < r) {reg.I--; nei.I++}
-                else {reg.R--; nei.R++}
-                reg.total--; nei.total++
-            }
-        }
-    }
 }
 
 function apply_measures(curr_measure, recov = 1/10, r = 3.0){
@@ -199,6 +194,6 @@ for (let n = 0; n < 30; n++) {
         count++;
         console.log(measure_now)
     }
-    step_epidemic(Regions, 0.9, measure_now)
+    step_epidemic(Regions, 0.01, measure_now)
     console.log(count_infected(Regions))
 }
