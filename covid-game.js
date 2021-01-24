@@ -34,12 +34,20 @@ class Region {
 }
 
 function random_region() {
-    total = 100 
-    I = Math.round(0.1 * Math.random() * total)
+    total = 100000
+    I = Math.round(10 * Math.random())
     R = 0
     S = total - I   
     return new Region(S, I, R, total, "name")
 }
+
+function region_u0_9_infected(total, tag) {
+    I = Math.round(10 * Math.random())
+    R = 0
+    S = total - I   
+    return new Region(S, I, R, total)
+}
+
 
 function connect_regions_randomly(Regions, n_edges) {
     let n_reg = Regions.length
@@ -108,3 +116,21 @@ function measures(distanced, school_closed, business_closed, groups_limited, tes
     return [infect, recov]
 }
 
+function count_infected(Regions){
+    infected = 0
+    for (reg of Regions) {infected += reg.I}
+    return infected
+}
+
+Regions = []
+
+for (let n = 0; n < 120; n++) {
+    Regions.push(random_region())
+}
+
+connect_regions_randomly(Regions, 2)
+
+for (let n = 0; n < 30; n++) {
+    console.log(count_infected(Regions))
+    step_epidemic(Regions, 0.3, 0.1, 0.9)
+}
