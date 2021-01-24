@@ -22,13 +22,14 @@ Make the measures modify R and travel probability.
 */
 
 class Region {
-    constructor(N_S, N_I, N_R, N_total, tag) {
+    constructor(N_S, N_I, N_R, N_total, tag, name) {
         console.assert(N_S + N_I, + N_R == N_total);
         this.S = N_S
         this.I = N_I
         this.R = N_R
         this.total = N_total
         this.tag = tag
+        this.name = name
         this.neighbours = Array() // Needs to be populated later
     }
 }
@@ -38,21 +39,21 @@ function region_100k_u0_9_infected() {
     I = Math.round(10 * Math.random())
     R = 0
     S = total - I   
-    return new Region(S, I, R, total, "name")
+    return new Region(S, I, R, total, "00000", "name")
 }
 
-function region_u0_9_infected(total, tag) {
+function region_u0_9_infected(total, tag, name) {
     I = Math.round(10 * Math.random())
     R = 0
     S = total - I   
-    return new Region(S, I, R, total, tag)
+    return new Region(S, I, R, total, tag, name)
 }
 
-function region_with_incidence(total, incidence, tag) {
+function region_with_incidence(total, incidence, tag, name) {
     I = incidence / 100000 * total
     R = 0
     S = total - I   
-    return new Region(S, I, R, total, tag)
+    return new Region(S, I, R, total, tag, name)
 }
 
 function connect_regions_randomly(Regions, n_edges) {
