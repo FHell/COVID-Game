@@ -33,6 +33,18 @@ class Region {
     }
 }
 
+class Measures {
+    constructor(distanced=false, schools_closed=false, business_closed=false,
+                groups_limited=false, test_and_trace=false, local_measures){
+        this.distanced = distanced
+        this.schools_closed = schools_closed
+        this.business_closed = business_closed
+        this.groups_limited = groups_limited
+        this.test_and_trace = test_and_trace
+        this.local_measures = local_measures // array that has information on regions with local measures
+    }
+}
+
 function region_100k_u0_9_infected() {
     total = 100000
     I = Math.round(10 * Math.random())
@@ -87,7 +99,15 @@ function local_SIR_step(reg, infect, recov) {
     reg.R += delta_R
 }
 
-function step_epidemic(Regions, infect, recov, travel) {
+function step_epidemic(Regions, infect, recov, travel, curr_measures) {
+    let adjusted;
+    // Looking at measures
+    if (curr_measures != null){
+        adjusted = apply_measures(curr_measures, recov)
+        infect = adjusted[0]
+        recov = adjusted[1]
+    }
+
     // We first run the epidemic locally, then we travel
     for (reg of Regions) {local_SIR_step(reg, infect, recov)}
 
@@ -105,17 +125,15 @@ function step_epidemic(Regions, infect, recov, travel) {
     }
 }
 
-function measures(distanced, school_closed, business_closed, groups_limited, test_trace){
-    var recov = 1/10
-    var r = 3.0
+function apply_measures(curr_measure, recov = 1/10, r = 3.0){
 
     // We really want more complicated logic here,
     // including local breakdowns of test and tract, but to start with this will have to do.
-    if (distanced) {r -= 0.6}
-    if (school_closed) {r -= 0.6}
-    if (business_closed) {r -= 0.5}
-    if (groups_limited) {r -= 0.5}
-    if (test_trace) {r -= 0.4}
+    if (curr_measure.distanced) {r -= 0.6}
+    if (curr_measure.schools_closed) {r -= 0.6}
+    if (curr_measure.business_closed) {r -= 0.5}
+    if (curr_measure.groups_limited) {r -= 0.5}
+    if (curr_measure.test_and_trace) {r -= 0.4}
 
     var infect = r * recov
 
@@ -136,7 +154,33 @@ for (let n = 0; n < 120; n++) {
 
 connect_regions_randomly(Regions, 2000)
 
+c_measures = Array()
+c_measures.push(new Measures(true, false,false,false,
+    false, false))
+c_measures.push(new Measures(false, true,false,false,
+    false, false))
+c_measures.push(new Measures(false, false,true,false,
+    false, false))
+c_measures.push(new Measures(false, false,false,true,
+    false, false))
+c_measures.push(new Measures(false, false,false,false,
+    true, false))
+
+
+let count = 0
+let measure_now;
+let measure_old;
 for (let n = 0; n < 30; n++) {
-    console.log(count_infected(Regions))
-    step_epidemic(Regions, 0.3, 0.1, 0.9)
+    measure_old = c_measures[count]
+    if (n % 7==0) {
+        measure_now = c_measures[count];
+        count++;
+        console.log(measure_now)
+    }
+    if (measure_old == measure_now) {
+        step_epidemic(Regions, 0.3, 0.1, 0.9, null)
+    } else {
+        step_epidemic(Regions, 0.3, 0.1, 0.9, measure_now)
+    }
+
 }
