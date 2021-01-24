@@ -1,0 +1,78 @@
+<!-- initial code adapted from d3-graph-gallery.com -->
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v4.js"></script>
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+<script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+
+
+<!-- Create an element where the map will take place -->
+<svg id="my_dataviz" width="800" height="1000"></svg>
+
+
+<script src="covid-game.js"></script>
+
+<script>
+
+
+
+
+// The svg
+var svg = d3.select("svg"),
+  width = +svg.attr("width"),
+  height = +svg.attr("height");
+
+// Map and projection
+var path = d3.geoPath();
+var projection = d3.geoMercator()
+  .scale(1200)
+  .center([10,40])
+  .translate([width / 2, height / 2]);
+
+// Data and color scale
+var data = d3.map();
+var colorScale = d3.scaleThreshold()
+  .domain([100000, 1000000, 10000000, 30000000, 100000000, 500000000])
+  .range(d3.schemeBlues[7]);
+
+// Load external data and boot
+d3.queue()
+  //.defer(d3.json, "bundeslaender_simplify200.geojson")
+  .defer(d3.json, "landkreise_simplify200.geojson")
+  .await(start_sim);
+
+
+function draw_map(topo, fill_fn) {
+  svg.append("g")
+    .selectAll("path")
+    .data(topo.features)
+    .enter()
+    .append("path")
+      .attr("d", d3.geoPath().projection(projection))     // draw each country
+      .attr("fill", fill_fn);                             // set the color of each country
+}
+
+var step_no = 0;
+function step(topo) {
+    step_no = step_no % 1000 + 1;
+    draw_map(topo, function (d) {
+              //d.total = data.get(d.id) || 0;
+              d.total = step_no * 100000;
+              return colorScale(d.total);
+        });
+}
+
+function start_sim(error, topo) {
+  console.log(topo);
+  step_no = 0;
+  //setInterval(step, 1000, topo);
+  step(topo);
+
+  var regions = []
+  var r = new Region(10, 2, 4, 16, "BER");
+
+}
+
+</script>
