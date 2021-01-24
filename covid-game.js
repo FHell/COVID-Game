@@ -1,5 +1,5 @@
 /*
-The overall design is: We have abunch of regions with exchange between them.
+The overall design is: We have a bunch of regions with exchange between them.
 These Regions follow some stochastic dynamic. We have countermeasures that
 modify this dynamics.
 
@@ -22,7 +22,8 @@ Make the measures modify R and travel probability.
 */
 
 class Region {
-    constructor(N_S, N_I, N_R, N_total, tag){
+    constructor(N_S, N_I, N_R, N_total, tag) {
+        console.assert(N_S + N_I, + N_R == N_total);
         this.S = N_S
         this.I = N_I
         this.R = N_R
