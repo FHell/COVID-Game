@@ -6,6 +6,7 @@
 <script src="https://d3js.org/d3.v4.js"></script>
 <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
 <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+<script src='https://unpkg.com/@turf/turf/turf.min.js'></script>
 
 
 <!-- Create an element where the map will take place -->
@@ -65,6 +66,17 @@ function step(topo, regions) {
         });
 }
 
+function findIncidence(ctag, def) {
+    let incr = incidence.find(e => e.tag == ctag);
+    if (incr == null)  {
+      console.log("No match for tag ", ctag, " => set to default ", def);
+      return def;
+    } else {
+      return incr.inc;
+    }
+}
+
+
 function start_sim(error, topo) {
   console.log(topo);
   step_no = 0;
@@ -72,19 +84,21 @@ function start_sim(error, topo) {
   
   var regions = []
   topo.features.forEach(e => { 
-    let ctag = e.properties.AGS;
-    let incr = incidence.find(e => e.tag == ctag);
-    let inc = 115;
-    if (incr == null)  {
-      console.log("No match for LK #", ctag, " (", e.properties.GEN, ") => set to default ", inc);
-    } else {
-      inc = incr.inc;
-    }
+    let inc = findIncidence(e.properties.AGS, 115); // default incidence 115
+    let r = region_with_incidence(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN)
 
-    regions.push(region_with_incidence(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN));
+    // distance between regions
+    let com = turf.centerOfMass(e.geometry).geometry.coordinates;
+    topo.features.forEach((p, i) => {
+      let n = turf.centerOfMass(p.geometry).geometry.coordinates;
+      let d = turf.distance(com, n);
+      r.neighbours.push({index: i, dist: d});
+    });
+
+    regions.push(r);
   });
 
-  console.log(regions);
+  console.log("Regions = ", regions);
   step(topo, regions);
 
   console.log("done");
