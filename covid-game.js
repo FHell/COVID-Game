@@ -78,15 +78,6 @@ function connect_regions_randomly(Regions) {
     }
 }
 
-// The array neighbours contains references to the objects in the regions array:
-//
-// r = [region_u0_9_infected(100), region_u0_9_infected(101)]
-// r[0].neighbours.push(r[1])
-// r[1].neighbours.push(r[0]) 
-// r[0].neighbours[0].R = 30
-// console.log(r[1].R) // == 30
-
-
 function local_SIR_step(reg, infect, recov) {
     let delta_I = 0 // newly infected
     let delta_R = 0 // newly recovered
@@ -200,4 +191,4 @@ function self_test() {
     }
 }
 
-self_test();
+//self_test();
