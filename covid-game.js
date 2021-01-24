@@ -28,12 +28,29 @@ class Region {
         this.R = N_R
         this.total = N_total
         this.tag = tag
-        this.neighbours = [] // Needs to be populated later
+        this.neighbours = Array() // Needs to be populated later
     }
 }
 
-var neighbours = [] //array of array of neighbours
-var Regions = []
+function random_region() {
+    total = 100 
+    I = Math.round(0.1 * Math.random() * total)
+    R = 0
+    S = total - I   
+    return new Region(S, I, R, total, "name")
+}
+
+function connect_regions_randomly(Regions, n_edges) {
+    let n_reg = Regions.length
+    for (let n = 0; n < n_edges; n++) {
+        n_1 = Math.floor(Math.random() * n_reg)
+        n_2 = Math.floor(Math.random() * n_reg)
+        if (n_1 != n_2) {
+            Regions[n_1].neighbours.push(Regions[n_2])
+            Regions[n_2].neighbours.push(Regions[n_1]) 
+        }
+    }
+}
 
 function local_SIR_step(reg, infect, recov) {
     let delta_I = 0 // newly infected
@@ -49,18 +66,19 @@ function local_SIR_step(reg, infect, recov) {
         if (Math.random() < recov) {delta_R++}
     }
 
+    // check that S, I and R stay positive
     reg.S -= delta_I
     reg.I += delta_I - delta_R
-    reg.R -= delta_R
+    reg.R += delta_R
 }
 
 function step_epidemic(Regions, infect, recov, travel) {
     // We first run the epidemic locally, then we travel
-    for (reg in Regions) {local_SIR_step(reg, infect, recov)}
+    for (reg of Regions) {local_SIR_step(reg, infect, recov)}
 
-    for (reg in Regions) {
+    for (reg of Regions) {
         // For every nighbour we have probability for a random person to travel there
-        for (nei in reg.neighbours) {
+        for (nei of reg.neighbours) {
             if (Math.random() < travel) {
                 r = Math.random() * reg.total
                 if (reg.S < r) {reg.S--; nei.S++}
