@@ -1,52 +1,100 @@
-<!-- initial code adapted from d3-graph-gallery.com -->
 <!DOCTYPE html>
 <meta charset="utf-8">
 
-<!-- Load d3.js -->
+<head>
 <script src="https://d3js.org/d3.v4.js"></script>
-<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+<script src="https://d3js.org/d3-scale-chromatic.v2.min.js"></script>
 <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
 <script src='https://unpkg.com/@turf/turf/turf.min.js'></script>
 
+<style>
+html, body              { } 
+.grid-container         { display: grid; grid-template-columns: 0.5fr 1fr; grid-template-rows: 0.5fr 1fr; gap: 0px 0px;
+                         grid-template-areas:
+                            "ctrl time"
+                            "ctrl map";
+                        }
+.map                    { grid-area: map; width:600px; height: 800px; }
+.time                   { grid-area: time; font-size: small;}
+.ctrl                   { grid-area: ctrl; }
+</style>
+</head>
 
-<!-- Create an element where the map will take place -->
-<svg id="my_dataviz" width="800" height="1000"></svg>
+<body>
+<div class="grid-container">
+<svg class="map" id="germany"></svg>
+<div class="ctrl">
+    <h6>Counter Measures</h6> 
 
+    <input type="checkbox" id="m1" name="measure1" onchange=toggleMeasure() value="distanced">      <label for="m1">Social Distanceing</label><br>
+    <input type="checkbox" id="m2" name="measure2" onchange=toggleMeasure() value="schools_closed"> <label for="m2">Close Schools</label><br>
+    <input type="checkbox" id="m3" name="measure3" onchange=toggleMeasure() value="business_closed"><label for="m3">Close Businesses</label><br>
+    <input type="checkbox" id="m4" name="measure4" onchange=toggleMeasure() value="groups_limited"> <label for="m4">Limit Group Sizes</label><br>
+    <input type="checkbox" id="m5" name="measure5" onchange=toggleMeasure() value="test_and_trace"> <label for="m5">Test and Trace</label><br>
+    <input type="checkbox" id="m6" name="measure6" onchange=toggleMeasure() value="lockdown_50">    <label for="m6">Regional Lockdown</label><br>
+</div>
+<div class="time">
+    <label for="cd">Time (<span id="cdo"></span> days):</label></p>
+    <input id="cd" type="range" min="1" max="200" value="0">
+    <button id="run" onclick="toggleRunning()">Run!</button>
+</div>
+</div>
+</body>
 
 <script src="covid-game.js"></script>
 
 <script>
-// The svg
-var svg = d3.select("svg"),
-    width = +svg.attr("width"),
-    height = +svg.attr("height");
+//---- Controls ---------------------------------------------------------------------------------------------------------------
+var slider = document.getElementById("cd");
+var output = document.getElementById("cdo");
+    output.innerHTML = slider.value; 
+    slider.disable;
+
+var running = false;  // TODO: this should be in State
+var runner = document.getElementById("run");
+function toggleRunning() {
+    running = !running;
+    runner.innerHTML = running ? "Pause" : "Run";
+}
+
+function slider_set_value(value) {
+    output.innerHTML = value;
+    slider.value = value;
+}
+
+var gState = null;
+function toggleMeasure() {
+    if (gState == null) { return; }
+
+    gState.measures = new Measures  ( document.getElementById("m1").checked
+                                    , document.getElementById("m2").checked
+                                    , document.getElementById("m3").checked
+                                    , document.getElementById("m4").checked
+                                    , document.getElementById("m5").checked
+                                    , document.getElementById("m6").checked
+                                    );
+}
+
+//---- Map Rendering ----------------------------------------------------------------------------------------------------------
+var svg = d3.select("svg");
+    var svg_width = +svg.property("clientWidth");
+    var svg_height = +svg.property("clientHeight");
 
 // Map and projection
 var path = d3.geoPath();
 var projection = d3.geoMercator()
     .scale(1200)
-    .center([10,40])
-    .translate([width / 2, height / 2]);
+    .center([10,44])
+    .translate([svg_width / 2, svg_height / 2]);
 
 // Data and color scale
 var data = d3.map();
 var colorScale = d3.scaleThreshold()
-    .domain([25, 50, 100, 150, 200, 300])
-    .range(d3.schemeBlues[7]);
-
-
-var incidence = [];
-// Load external data and boot
-d3.queue()
-    //.defer(d3.json, "bundeslaender_simplify200.geojson")
-    .defer(d3.json, "landkreise_simplify200.geojson")
-    .defer(d3.csv, "7T_Inzidenz_LK_22_1.csv", function(d) {  
-        incidence.push({ name: d.Landkreis, tag: d.LKNR, active: d.Anzahl, inc: d.Inzidenz })
-    })
-    .await(start_sim);
-
+    .domain([5, 25, 50, 100, 150, 200, 300, 400])
+    .range(d3.schemeOrRd[9]);
 
 function draw_map_d3(topo, fill_fn) {
+    svg.selectAll("g").remove();
     svg.append("g")
         .selectAll("path")
         .data(topo.features)
@@ -56,7 +104,7 @@ function draw_map_d3(topo, fill_fn) {
             .attr("fill", fill_fn);                             // set the color of each country
 }
 
-
+//---- Handle Simulation State ------------------------------------------------------------------------------------------------
 
 class State {
     constructor(regions, measures = new Measures(true, false, false, false, false, false, false)) {
@@ -79,12 +127,21 @@ function simulate_step(state) {
     step_epidemic(state.regions, 0.01, state.measures);
 }
 
-
 function draw_step(topo, state) {
+    if (state.step_no >= slider.max) { running = false; }
+    if (!running) { return; }
+
     simulate_step(state);
     draw_map(topo, state);
+
+    slider_set_value(state.step_no)
+    console.log("Rendered state", state);
 }
 
+
+//---- Load & Preprocess Data -------------------------------------------------------------------------------------------------
+
+var incidence = [];
 function findIncidence(ctag, def) {
     let incr = incidence.find(e => e.tag == ctag);
     if (incr == null)  {
@@ -95,10 +152,17 @@ function findIncidence(ctag, def) {
     }
 }
 
+d3.queue()
+    .defer(d3.json, "landkreise_simplify200.geojson")
+    .defer(d3.csv, "7T_Inzidenz_LK_22_1.csv", function(d) {  
+        incidence.push({ name: d.Landkreis, tag: d.LKNR, active: d.Anzahl, inc: d.Inzidenz })
+    })
+    .await(start_sim);
+
 function start_sim(error, topo) {
     var regions = []
     topo.features.forEach(e => { 
-        let inc = findIncidence(e.properties.AGS, 115); // default incidence 115
+        let inc = findIncidence(e.properties.AGS, 115); // TODO: default incidence hardcoded to 115, should be average from CSV dataset
         let r = region_with_incidence(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN)
             // for distance between regions 
             // two passes to prevent expensive recalculation
@@ -114,13 +178,17 @@ function start_sim(error, topo) {
     });
 
 
-    state = new State(regions);
-    console.log("Initial State = ", state);
+    gState = new State(regions);
+    console.log("Initial State = ", gState);
 
-    draw_map(topo, state);
+    draw_map(topo, gState);
 
     console.log("done");
-    setInterval(draw_step, 1000, topo, state);
+
+    // TODO: find out how to trigger and stop this timer on demand, right now we just 
+    //       keep up "the beat" and decide to do breaks if needed. 
+    setInterval(draw_step, 1000, topo, gState);
 }
 
+//-----------------------------------------------------------------------------------------------------------------------------
 </script>
