@@ -18,91 +18,109 @@
 <script>
 // The svg
 var svg = d3.select("svg"),
-  width = +svg.attr("width"),
-  height = +svg.attr("height");
+    width = +svg.attr("width"),
+    height = +svg.attr("height");
 
 // Map and projection
 var path = d3.geoPath();
 var projection = d3.geoMercator()
-  .scale(1200)
-  .center([10,40])
-  .translate([width / 2, height / 2]);
+    .scale(1200)
+    .center([10,40])
+    .translate([width / 2, height / 2]);
 
 // Data and color scale
 var data = d3.map();
 var colorScale = d3.scaleThreshold()
-  .domain([25, 50, 100, 150, 200, 300])
-  .range(d3.schemeBlues[7]);
+    .domain([25, 50, 100, 150, 200, 300])
+    .range(d3.schemeBlues[7]);
 
 
 var incidence = [];
 // Load external data and boot
 d3.queue()
-  //.defer(d3.json, "bundeslaender_simplify200.geojson")
-  .defer(d3.json, "landkreise_simplify200.geojson")
-  .defer(d3.csv, "7T_Inzidenz_LK_22_1.csv", function(d) {  
-      incidence.push({ name: d.Landkreis, tag: d.LKNR, active: d.Anzahl, inc: d.Inzidenz })
-  })
-  .await(start_sim);
+    //.defer(d3.json, "bundeslaender_simplify200.geojson")
+    .defer(d3.json, "landkreise_simplify200.geojson")
+    .defer(d3.csv, "7T_Inzidenz_LK_22_1.csv", function(d) {  
+        incidence.push({ name: d.Landkreis, tag: d.LKNR, active: d.Anzahl, inc: d.Inzidenz })
+    })
+    .await(start_sim);
 
 
-function draw_map(topo, fill_fn) {
-  svg.append("g")
-    .selectAll("path")
-    .data(topo.features)
-    .enter()
-    .append("path")
-      .attr("d", d3.geoPath().projection(projection))     // draw each country
-      .attr("fill", fill_fn);                             // set the color of each country
+function draw_map_d3(topo, fill_fn) {
+    svg.append("g")
+        .selectAll("path")
+        .data(topo.features)
+        .enter()
+        .append("path")
+            .attr("d", d3.geoPath().projection(projection))     // draw each country
+            .attr("fill", fill_fn);                             // set the color of each country
 }
 
-var step_no = 0;
-function step(topo, regions) {
-    step_no = step_no % 1000 + 1;
-    draw_map(topo, function (f) {
-              let ctag = f.properties.AGS;
-              let cr = regions.find(e => e.tag == ctag);
-              return colorScale(cr.I);
-        });
+
+
+class State {
+    constructor(regions, measures = new Measures(true, false, false, false, false, false, false)) {
+        this.regions = regions;
+        this.measures = measures;
+        this.step_no = 0;
+    }
+}
+
+function draw_map(topo, state) {
+    draw_map_d3(topo, function (f) {
+        let ctag = f.properties.AGS;
+        let cr = state.regions.find(e => e.tag == ctag);
+        return colorScale(cr.I);
+    });
+}
+
+function simulate_step(state) {
+    state.step_no++;
+    step_epidemic(state.regions, 0.01, state.measures);
+}
+
+
+function draw_step(topo, state) {
+    simulate_step(state);
+    draw_map(topo, state);
 }
 
 function findIncidence(ctag, def) {
     let incr = incidence.find(e => e.tag == ctag);
     if (incr == null)  {
-      console.log("No match for tag ", ctag, " => set to default ", def);
-      return def;
+        console.log("No match for tag ", ctag, " => set to default ", def);
+        return def;
     } else {
-      return incr.inc;
+        return incr.inc;
     }
 }
 
-
 function start_sim(error, topo) {
-  console.log(topo);
-  step_no = 0;
-  //setInterval(step, 1000, topo);
-  
-  var regions = []
-  topo.features.forEach(e => { 
-      let inc = findIncidence(e.properties.AGS, 115); // default incidence 115
-      let r = region_with_incidence(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN)
-          // for distance between regions 
-          // two passes to prevent expensive recalculation
-          r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
-      regions.push(r);
-  });
+    var regions = []
+    topo.features.forEach(e => { 
+        let inc = findIncidence(e.properties.AGS, 115); // default incidence 115
+        let r = region_with_incidence(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN)
+            // for distance between regions 
+            // two passes to prevent expensive recalculation
+            r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
+        regions.push(r);
+    });
 
-  // second pass ... finish up distance calculations
-  regions.forEach((src_r) => {
-      regions.forEach((dst_r, i) => {
-          src_r.neighbours.push({index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass)});
-      });
-  });
+    // second pass ... finish up distance calculations
+    regions.forEach((src_r) => {
+        regions.forEach((dst_r, i) => {
+            src_r.neighbours.push({index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass)});
+        });
+    });
 
-  console.log("Regions = ", regions);
-  step(topo, regions);
 
-  console.log("done");
+    state = new State(regions);
+    console.log("Initial State = ", state);
+
+    draw_map(topo, state);
+
+    console.log("done");
+    //setInterval(step, 1000, topo);
 }
 
 </script>
