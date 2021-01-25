@@ -120,7 +120,7 @@ function start_sim(error, topo) {
     draw_map(topo, state);
 
     console.log("done");
-    //setInterval(step, 1000, topo);
+    setInterval(draw_step, 1000, topo, state);
 }
 
 </script>
