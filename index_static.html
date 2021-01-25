@@ -84,18 +84,19 @@ function start_sim(error, topo) {
   
   var regions = []
   topo.features.forEach(e => { 
-    let inc = findIncidence(e.properties.AGS, 115); // default incidence 115
-    let r = region_with_incidence(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN)
+      let inc = findIncidence(e.properties.AGS, 115); // default incidence 115
+      let r = region_with_incidence(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN)
+          // for distance between regions 
+          // two passes to prevent expensive recalculation
+          r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
+      regions.push(r);
+  });
 
-    // distance between regions
-    let com = turf.centerOfMass(e.geometry).geometry.coordinates;
-    topo.features.forEach((p, i) => {
-      let n = turf.centerOfMass(p.geometry).geometry.coordinates;
-      let d = turf.distance(com, n);
-      r.neighbours.push({index: i, dist: d});
-    });
-
-    regions.push(r);
+  // second pass ... finish up distance calculations
+  regions.forEach((src_r) => {
+      regions.forEach((dst_r, i) => {
+          src_r.neighbours.push({index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass)});
+      });
   });
 
   console.log("Regions = ", regions);
