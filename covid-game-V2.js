@@ -22,10 +22,12 @@ Make the measures modify R and travel probability.
 */
 var PD = require("probability-distributions");
 
+
 class Region {
-    constructor(N_S, N_I, N_M, N_R, N_total, tag, name) {
+    constructor(N_S, N_E, N_I, N_Em, N_Im, N_R, N_total, trace_capacity, tag, name) {
         console.assert(N_S + N_I, + N_R == N_total);
         
+        // These should be arrays        
         this.S = N_S
         this.E = N_E
         this.I = N_I
@@ -34,46 +36,176 @@ class Region {
         this.R = N_R
 
         this.total = N_total
-        this.ttin = 0 // total traveling infected neighbours
+        this.trace_capcity = trace_capacity
+
+        this.travel_I = 0 // total traveling infected neighbours
+        this.travel_Im = 0 // total traveling infected neighbours with mutant
         this.tag = tag
         this.name = name
         this.neighbours = Array() // Needs to be populated later
     }
 }
 
-class Measures {
-    constructor(distanced=false, schools_closed=false, business_closed=false,
-                groups_limited=false, test_and_trace=false, lockdown_50=false, local_measures){
-        this.distanced = distanced
-        this.schools_closed = schools_closed
-        this.business_closed = business_closed
-        this.groups_limited = groups_limited
-        this.test_and_trace = test_and_trace
-        this.lockdown_50 = lockdown_50
-        this.local_measures = local_measures // array that has information on regions with local measures
+// Measures taken from slide
+class Measure_State {
+    constructor(){
+        this.gatherings_1000 = false
+        this.gatherings_100 = false
+        this.gatherings_10 = false
+        this.schools_unis_closed = false
+        this.some_business_closed = false
+        this.all_business_closed = false
+        this.test_trace_isolate = false
+        this.stay_at_home = false
     }
+}
+
+// translate the current measures into a relative scaling of R and var
+// To start with we assume they are proportional
+function measure_effect(cm) {
+    // This is how I interpret the slide. Might or might not be true:
+    r_mult = 1.
+    if (cm.gatherings_10) {r_mult *= 1 - 0.2}
+    else if (cm.gatherings_100) {r_mult *= 1 - 0.25}
+    else if (cm.gatherings_1000) {r_mult *= 1 - 0.35}
+
+    if (cm.schools_unis_closed) {r_mult *= 1 - 0.4}
+    
+    if (cm.some_business_closed) {r_mult *= 1 - 0.2}
+    else if (cm.all_business_closed) {r_mult *= 1 - 0.3}
+
+    if (cm.stay_at_home) {r_mult *= 1 - 0.1}
+
+    return [r_mult, r_mult]
+}
+
+
+cov_pars = {R : 0.3, Rm : 0.45, var : 0.8, recov : 0.1, E_to_I : 0.5}
+
+function tti_eff(infected, trace_capacity) {
+    // rough model is Just dreamed up of test, trace, isolate efficiency,
+    // (because I'm to lazy to read the papers more thoroughly):
+    // if we can trace everyone we reduce R by 1/3rd
+    // if not we reduce it by 1/3rd for the fraction traced and not at all for the rest.
+    if (infected < trace_capacity) {return 0.66}
+    else {return (0.66 * trace_capacity / infected + (infected - trace_capacity) / infected)}
+}
+
+function local_step(reg, r_mult, var_mult, tti) {
+    // Unfortunately it seems that these sample functions are not very efficient once the
+    // epidemic goes large. We should replace them with approximations then.
+    // Both binomial and negative binomial become approximately normal for large size
+    // parameter.
+
+    delta_E = 0 // newly exposed
+    delta_Em = 0 // newly exposed mutant
+    delta_I = 0 // newly infected
+    delta_Im = 0 // newly infected mutant
+    delta_R = 0 // newly removed
+    delta_Rm = 0 // newly removed mutant
+
+    now = reg.S.length - 1
+
+    if (reg.S[now] < 0) {console.log("Something went wrong, S went negative")}
+
+    if (tti) {
+        local_r = (reg.S[now] / reg.total) * r_mult * cov_pars.R * tti_eff(reg.I[now] + reg.Im[now], reg.trace_capacity)
+        local_rm = (reg.S[now] / reg.total) * r_mult * cov_pars.Rm * tti_eff(reg.I[now] + reg.Im[now], reg.trace_capacity)
+    }
+    else {
+        local_r = (reg.S[now] / reg.total) * r_mult * cov_pars.R
+        local_rm = (reg.S[now] / reg.total) * r_mult * cov_pars.Rm
+    }
+    local_var = (reg.S[now] / reg.total) * var_mult * cov_pars.var
+
+    // Every exposed has an E_to_I probability to become infectious
+    delta_I = PD.rbinom(1, reg.E[now], cov_pars.E_to_I)[0]
+    delta_Im = PD.rbinom(1, reg.Em[now], cov_pars.E_to_I)[0]
+
+    // Every infectious in the region will cause a negative binomial distribution of new infected today.
+    // The sum of N iid negative binomials is a negative binomial with size parameter scaled by N
+    
+    // The variance must always be larger than the mean in this model.
+    //  The threshold 0.9 is arbitrary here, hopefully we wont hit this case with real parametrization.
+    if (local_var < 0.9 * local_r) {local_var = 0.9 * local_r}
+
+    // Calculate the negative binomial parameters
+    p = 1 - local_r/local_var
+    size = Math.round((reg.I[now] + reg.travel_I) * (1 - p) / p)
+
+
+    // Because we are spreading over several days and our PD.rnbinom can not deal with non_integer
+    // sizes we have to special case small sizes.
+    // This is just a placeholder for a proper treatment:
+    if (size < 1) {size = 1}
+
+
+    delta_E = PD.rnbinom(1, size, p)[0]
+
+    if (local_var < 0.9 * local_rm) {local_var = 0.9 * local_rm}
+    pm = 1 - local_rm/local_var
+    sizem = Math.round((reg.Im[now] + reg.travel_Im) * (1 - pm) / pm)
+    if (sizem < 1) {sizem = 1}
+    delta_Em = PD.rnbinom(1, sizem, pm)[0]
+
+    // Every recovered has an recov probability to recover
+    delta_R = PD.rbinom(1, reg.I[now], cov_pars.recov)[0]
+    delta_Rm = PD.rbinom(1, reg.Im[now], cov_pars.recov)[0]
+
+
+    c1 = reg.S[now] - delta_E - delta_Em
+    if (c1 < 0){
+        if (c1 < delta_E) {delta_E -= c1}
+        else if (c1 < delta_Em) {delta_Em -= c1}
+        else if (c1 < delta_Em + delta_E) {delta_Em -= c1 + delta_E; delta_E = 0}
+        else {delta_Em = reg.S[now]; delta_E = 0}
+        }
+
+    reg.S.push(reg.S[now] - delta_E - delta_Em)
+    reg.E.push(reg.E[now] + delta_E - delta_I)
+    reg.Em.push(reg.Em[now] + delta_Em - delta_Im)
+    reg.I.push(reg.I[now] + delta_I - delta_R)
+    reg.Im.push(reg.Im[now] + delta_Im - delta_Rm)
+    reg.R.push(reg.I[now] + delta_R - delta_Rm)
+}
+
+function step_epidemic(Regions, curr_measures, travel) {
+
+    // travel is the fraction of people from a region that travel to a neighbouring region
+    // in our first approximation these are simply all regions within 100km and travel is a constant fraction.
+    // these people cause infections at the place they travel to as well as at home.
+    
+    now = reg.S.length - 1
+    
+    for (reg of Regions) {
+        reg.travel_I = 0
+        reg.travel_Im = 0
+        for (nei of reg.neighbours){
+            if (nei.dist < 100 && reg != Regions[nei.index]) {
+                reg.travel_I += Math.round(travel * Regions[nei.index].I[now])
+                reg.travel_Im += Math.round(travel * Regions[nei.index].Im[now])
+            }
+        }
+    }
+
+    r_var_mult = measure_effect(curr_measures)
+
+    for (reg of Regions) {
+        local_step(reg, r_var_mult[0], r_var_mult[1], curr_measures.test_trace_isolate)
+    }
+
 }
 
 function region_100k_u0_9_infected() {
     total = 100000
-    I = Math.round(10 * Math.random())
-    R = 0
-    S = total - I   
-    return new Region(S, I, R, total, "00000", "name")
-}
-
-function region_u0_9_infected(total, tag, name) {
-    I = Math.round(10 * Math.random())
-    R = 0
-    S = total - I   
-    return new Region(S, I, R, total, tag, name)
-}
-
-function region_with_incidence(total, incidence, tag, name) {
-    I = incidence / 100000 * total
-    R = 0
-    S = total - I   
-    return new Region(S, I, R, total, tag, name)
+    trace_capacity = 1000
+    I = [Math.round(10 * Math.random())]
+    Im = [0]
+    E = [0]
+    Em = [0]
+    R = [0]
+    S = [total - I[0]]
+    return new Region(S, E, I, Em, Im, R, total, trace_capacity, "000", "LK")
 }
 
 function connect_regions_randomly(Regions) {
@@ -84,87 +216,9 @@ function connect_regions_randomly(Regions) {
     }
 }
 
-function local_SIR_step(reg, infect, recov, dispersion) {
-    let delta_I = 0 // newly infected
-    let delta_R = 0 // newly recovered
-
-    // Calculate here what the local effect of various measures is.
-    // reduce the effectiveness of TTI based on the total number of infections,
-    // trigger a local lockdown if the number of infected is high enough, etc..
-
-    PD.rnbinom(10, 3, 0.3)
-
-    // every infected, and everyone traveling to the region
-    // has chance infect to infect a random person if that person is susceptible
-    for (let n = 0; n < reg.I + reg.ttin ; n++) {
-        if (Math.random() < infect * reg.S / reg.total) {delta_I++}
-    }
-
-    // every infected has chance recov to recover
-    for (let n = 0; n < reg.I; n++) {
-        if (Math.random() < recov) {delta_R++}
-    }
-
-    // check that S, I and R stay positive
-    reg.S -= delta_I
-    reg.I += delta_I - delta_R
-    reg.R += delta_R
-}
-
-function calc_local_params(reg, curr_measure, recov = 1/10, r = 3.0){
-
-    // We really want more complicated logic here,
-    // including local breakdowns of test and tract, but to start with this will have to do.
-    if (curr_measure.distanced) {r -= 0.6}
-    if (curr_measure.schools_closed) {r -= 0.6}
-    if (curr_measure.business_closed) {r -= 0.5}
-    if (curr_measure.groups_limited) {r -= 0.5}
-    if (curr_measure.test_and_trace) {r -= 0.4}
-    if (curr_measure.lockdown_50 && reg.I > 0.00005 * reg.total) {r -= 0.4}
-
-    var infect = r * recov
-
-    return [infect, recov]
-}
-
-
-function step_epidemic(Regions, travel, curr_measures) {
-
-    // travel is the fraction of people from a region that travel to a neighbouring region
-    // in our first approximation these are simply all regions within 100km and travel is a constant fraction.
-    // these people cause infections at the place they travel to as well as at home.
-    for (reg of Regions) {
-        reg.ttin = 0
-        for (nei of reg.neighbours){
-            if (nei.dist < 100 && reg != Regions[nei.index]) {reg.ttin += Math.round(travel * Regions[nei.index].I)}
-        }
-    }
-
-    for (reg of Regions) {
-        let pars = calc_local_params(reg, curr_measures);
-        local_SIR_step(reg, pars[0], pars[1])
-    }
-
-}
-
-function apply_measures(curr_measure, recov = 1/10, r = 3.0){
-
-    // We really want more complicated logic here,
-    // including local breakdowns of test and tract, but to start with this will have to do.
-    if (curr_measure.distanced) {r -= 0.6}
-    if (curr_measure.schools_closed) {r -= 0.6}
-    if (curr_measure.business_closed) {r -= 0.5}
-    if (curr_measure.groups_limited) {r -= 0.5}
-    if (curr_measure.test_and_trace) {r -= 0.4}
-
-    var infect = r * recov
-
-    return [infect, recov]
-}
-
 function count_infected(Regions){
     infected = 0
-    for (reg of Regions) {infected += reg.I}
+    for (reg of Regions) {infected += reg.I[reg.I.length - 1] + reg.Im[reg.Im.length - 1]}
     return infected
 }
 
@@ -177,30 +231,12 @@ function self_test() {
 
     connect_regions_randomly(Regions, 2000)
 
-    c_measures = Array()
-    c_measures.push(new Measures(true, false,false,false,
-        false, false, false))
-    c_measures.push(new Measures(false, true,false,false,
-        false, false, false))
-    c_measures.push(new Measures(false, false,true,false,
-        false, false, false))
-    c_measures.push(new Measures(false, false,false,true,
-        false, false, false))
-    c_measures.push(new Measures(false, false,false,false,
-        true, false, false))
+    c_meas = new Measure_State()
 
-
-    let count = 0
-    let measure_now = c_measures[0]
     for (let n = 0; n < 30; n++) {
-        if (n % 7==0) {
-            measure_now = c_measures[count];
-            count++;
-            console.log(measure_now)
-        }
-        step_epidemic(Regions, 0.01, measure_now)
+        step_epidemic(Regions, c_meas, 0.01)
         console.log(count_infected(Regions))
     }
 }
 
-//self_test();
+self_test();
