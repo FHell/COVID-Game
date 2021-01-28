@@ -40,6 +40,8 @@ class Region {
 
         this.travel_I = 0 // total traveling infected neighbours
         this.travel_Im = 0 // total traveling infected neighbours with mutant
+
+        this.background_rate = 0.1
         this.tag = tag
         this.name = name
         this.neighbours = Array() // Needs to be populated later
@@ -91,6 +93,14 @@ function tti_eff(infected, trace_capacity) {
     else {return (0.66 * trace_capacity / infected + (infected - trace_capacity) / infected)}
 }
 
+function prob_round(x) {
+    // This function rounds to the integer i below x with probability 1 - (x - i),
+    // and to the integer above otherwise. In terms of linear expectation values
+    // this is a smooth rounding function. :)
+    i = Math.floor(x)
+    if (Math.random() < (x - i)) {return i + 1} else {return i}
+}
+
 function local_step(reg, r_mult, var_mult, tti) {
     // Unfortunately it seems that these sample functions are not very efficient once the
     // epidemic goes large. We should replace them with approximations then.
@@ -131,24 +141,22 @@ function local_step(reg, r_mult, var_mult, tti) {
 
     // Calculate the negative binomial parameters
     p = 1 - local_r/local_var
-    size = Math.round((reg.I[now] + reg.travel_I) * (1 - p) / p)
+    size = prob_round((reg.I[now] + reg.travel_I) * (1 - p) / p + reg.background_rate)
 
 
     // Because we are spreading over several days and our PD.rnbinom can not deal with non_integer
     // sizes we have to special case small sizes.
-    // This is just a placeholder for a proper treatment:
-    if (size < 1) {size = 1}
-
-
-    delta_E = PD.rnbinom(1, size, p)[0]
+    if (size < 1) {delta_E = 0} else {
+    delta_E = PD.rnbinom(1, size, p)[0]}
 
     if (local_var < 0.9 * local_rm) {local_var = 0.9 * local_rm}
     pm = 1 - local_rm/local_var
-    sizem = Math.round((reg.Im[now] + reg.travel_Im) * (1 - pm) / pm)
-    if (sizem < 1) {sizem = 1}
-    delta_Em = PD.rnbinom(1, sizem, pm)[0]
+    sizem = prob_round((reg.Im[now] + reg.travel_Im) * (1 - pm) / pm  + reg.background_rate)
+    
+    if (sizem < 1) {delta_Em = 0} else {
+    delta_Em = PD.rnbinom(1, sizem, pm)[0]}
 
-    // Every recovered has an recov probability to recover
+    // Every recovered has a recov probability to recover
     delta_R = PD.rbinom(1, reg.I[now], cov_pars.recov)[0]
     delta_Rm = PD.rbinom(1, reg.Im[now], cov_pars.recov)[0]
 
