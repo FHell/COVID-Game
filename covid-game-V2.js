@@ -22,11 +22,11 @@ Make the measures modify R and travel probability.
 */
 
 function binom(N, p){
-    res = 0
+    suc = 0
     for (let n = 0; n < N; n++) {
-        if (Math.random() < p) {res++}
+        if (Math.random() < p) {suc++}
     }
-    return res
+    return suc
 }
 
 function neg_binom(r, p){
@@ -95,7 +95,6 @@ function measure_effect(cm) {
 
     return [r_mult, r_mult]
 }
-
 
 cov_pars = {R : 0.3, Rm : 0.45, var : 0.8, recov : 0.1, E_to_I : 0.5}
 
@@ -233,13 +232,32 @@ function connect_regions_randomly(Regions) {
     }
 }
 
-function count_infected(Regions){
-    infected = 0
-    for (reg of Regions) {infected += reg.I[reg.I.length - 1] + reg.Im[reg.Im.length - 1]}
-    return infected
+function count_infectious(Regions){
+    infectious = 0
+    for (reg of Regions) {infectious += reg.I[reg.I.length - 1] + reg.Im[reg.Im.length - 1]}
+    return infectious
 }
 
-function self_test() {
+function count_exposed(Regions){
+    exposed = 0
+    for (reg of Regions) {exposed += reg.E[reg.E.length - 1] + reg.Em[reg.Em.length - 1]}
+    return exposed
+}
+
+function count_recovered(Regions){
+    recovered = 0
+    for (reg of Regions) {recovered += reg.R[reg.R.length - 1]}
+    return recovered
+}
+
+function tti_over_capacity(Regions){
+    tti = 0
+    for (reg of Regions) {if (reg.I[reg.I.length - 1] + reg.Im[reg.Im.length - 1] > reg.trace_capacity) tti += 1}
+    return tti
+}
+
+
+function init_random_regions() {
     Regions = []
 
     for (let n = 0; n < 420; n++) {
@@ -248,11 +266,18 @@ function self_test() {
 
     connect_regions_randomly(Regions, 2000)
 
+    return Regions
+}
+
+function self_test() {
+
+    Regions = init_random_regions()
+
     c_meas = new Measure_State()
 
     for (let n = 0; n < 30; n++) {
         step_epidemic(Regions, c_meas, 0.01)
-        console.log(count_infected(Regions))
+        console.log(count_infectious(Regions))
     }
 }
 
