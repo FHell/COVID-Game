@@ -1,7 +1,16 @@
 # COVID-Game
 
-Prototyping a gamified version of COVID dynamics with various countermeasures.
+Intuitive visualisation and understanding of how different countermeasures affect the spread of coronavirus. Interactive JS of underlying SEIR model. 
 
+
+## Team
+Fabio Fracassi -- @FabioFracassi   
+Frank Hellmann  -- @FHell   
+Nora Molekenthin  -- PIK    
+Toni Mey -- @ppxasjsm -- Uni Edinburgh.  
+
+
+## Prototyping
 V1 Prototype based on a stochastic SIR model described here:
 [https://github.com/FHell/COVID-Game/blob/main/COVID_Game.pdf]
 
