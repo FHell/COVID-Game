@@ -30,12 +30,8 @@ Development at <a href="https://github.com/FHell/COVID-Game/">https://github.com
 <div class="ctrl">
     <h6>Counter Measures</h6> 
 
-    <input type="checkbox" id="m1" name="measure1" onchange=toggleMeasure() value="distanced">      <label for="m1">Social Distanceing</label><br>
-    <input type="checkbox" id="m2" name="measure2" onchange=toggleMeasure() value="schools_closed"> <label for="m2">Close Schools</label><br>
-    <input type="checkbox" id="m3" name="measure3" onchange=toggleMeasure() value="business_closed"><label for="m3">Close Businesses</label><br>
-    <input type="checkbox" id="m4" name="measure4" onchange=toggleMeasure() value="groups_limited"> <label for="m4">Limit Group Sizes</label><br>
-    <input type="checkbox" id="m5" name="measure5" onchange=toggleMeasure() value="test_and_trace"> <label for="m5">Test and Trace</label><br>
-    <input type="checkbox" id="m6" name="measure6" onchange=toggleMeasure() value="lockdown_50">    <label for="m6">Regional Lockdown</label><br>
+    <div id="cm"></div>
+    <div id="param"></div>
 </div>
 <div class="time">
     <label for="cd">Time (<span id="cdo"></span> days):</label></p>
@@ -45,7 +41,7 @@ Development at <a href="https://github.com/FHell/COVID-Game/">https://github.com
 </div>
 </body>
 
-<script src="covid-game.js"></script>
+<script src="covid-game-V2.js"></script>
 
 <script>
 //---- Controls ---------------------------------------------------------------------------------------------------------------
@@ -67,16 +63,26 @@ function slider_set_value(value) {
 }
 
 var gState = null;
-function toggleMeasure() {
-    if (gState == null) { return; }
 
-    gState.measures = new Measures  ( document.getElementById("m1").checked
-                                    , document.getElementById("m2").checked
-                                    , document.getElementById("m3").checked
-                                    , document.getElementById("m4").checked
-                                    , document.getElementById("m5").checked
-                                    , document.getElementById("m6").checked
-                                    );
+function createElementFromHTML(html) {
+    console.log(html);
+    var div = document.createElement('div');
+    div.innerHTML = html.trim();
+
+    return div;
+}
+
+function initMeasures() {
+    let cm = document.getElementById("cm");
+    Object.entries(possible_measures).forEach((e, i) => cm.appendChild(createElementFromHTML(
+        `<input type="checkbox" id="m${i}" name="measure${i}" onchange="toggleMeasure(this);" value="${e[0]}"> <label for="m${i}">${e[1].desc}</label><br>`
+    )));
+}
+initMeasures();
+
+function toggleMeasure(cb) {
+    if (gState == null) { return; }
+    gState.measures.toggle(cb.value);
 }
 
 //---- Map Rendering ----------------------------------------------------------------------------------------------------------
@@ -98,6 +104,7 @@ var colorScale = d3.scaleThreshold()
     .range(d3.schemeOrRd[9]);
 
 function draw_map_d3(topo, fill_fn) {
+    // TODO: This recreates all geometry, we should only update the final fill state.
     svg.selectAll("g").remove();
     svg.append("g")
         .selectAll("path")
@@ -111,7 +118,7 @@ function draw_map_d3(topo, fill_fn) {
 //---- Handle Simulation State ------------------------------------------------------------------------------------------------
 
 class State {
-    constructor(regions, measures = new Measures(true, false, false, false, false, false, false)) {
+    constructor(regions, measures = new Measure_State()) {
         this.regions = regions;
         this.measures = measures;
         this.step_no = 0;
@@ -122,13 +129,13 @@ function draw_map(topo, state) {
     draw_map_d3(topo, function (f) {
         let ctag = f.properties.AGS;
         let cr = state.regions.find(e => e.tag == ctag);
-        return colorScale(cr.I);
+        return colorScale(infected(cr));
     });
 }
 
 function simulate_step(state) {
     state.step_no++;
-    step_epidemic(state.regions, 0.01, state.measures);
+    step_epidemic(state.regions, state.measures, 0.01);
 }
 
 function draw_step(topo, state) {
