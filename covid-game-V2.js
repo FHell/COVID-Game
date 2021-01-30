@@ -119,7 +119,7 @@ function measure_effect(cm) {
     return [r_mult, r_mult]
 }
 
-cov_pars = {R : 0.3, Rm : 0.4, var : 0.8, recov : 0.1, E_to_I : 0.5}
+cov_pars = {R : 0.15, Rm : 0.25, var : 0.8, recov : 0.1, E_to_I : 0.5}
 
 function tti_eff(infected, trace_capacity) {
     // rough model is Just dreamed up of test, trace, isolate efficiency,
