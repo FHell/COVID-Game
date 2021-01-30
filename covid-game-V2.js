@@ -283,17 +283,12 @@ function exposed(reg)               { return get_current(reg.E) + get_current(re
 function infectious(reg)            { return get_current(reg.I) + get_current(reg.Im); }
 function infected(reg)              { return exposed(reg) + infectious(reg); }
 function recovered(reg)             { return get_current(reg.R); }
+function susceptible(reg)           { return get_current(reg.S); }
 
 function count_infectious(Regions)  { return count(infectious, Regions); }
 function count_exposed(Regions)     { return count(exposed, Regions); }
 function count_recovered(Regions)   { return count(recovered, Regions); }
-
-
-function count_susceptible(Regions){
-    c = 0
-    for (reg of Regions) {c += reg.S[reg.S.length - 1]}
-    return c
-}
+function count_susceptible(Regions) { return count(susceptible, Regions); }
 
 function tti_over_capacity(Regions){
     let tti = 0
@@ -305,14 +300,13 @@ function tti_over_capacity(Regions){
 
 
 function init_random_regions() {
-    Regions = []
+    let Regions = []
 
     for (let n = 0; n < 420; n++) {
         Regions.push(region_100k_u0_9_infected())
     }
 
     connect_regions_randomly(Regions, 2000)
-
     return Regions
 }
 
@@ -322,9 +316,8 @@ function log_reg(Regions){
 
 function self_test() {
 
-    Regions = init_random_regions()
-
-    c_meas = new Measure_State()
+    let Regions = init_random_regions()
+    let c_meas = new Measure_State()
 
     for (let n = 0; n < 5; n++) {
         log_reg(Regions)
