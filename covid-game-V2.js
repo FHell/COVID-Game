@@ -186,7 +186,7 @@ function local_step(reg, r_mult, var_mult, tti) {
     reg.Em.push(reg.Em[now] + delta_Em - delta_Im)
     reg.I.push(reg.I[now] + delta_I - delta_R)
     reg.Im.push(reg.Im[now] + delta_Im - delta_Rm)
-    reg.R.push(reg.I[now] + delta_R - delta_Rm)
+    reg.R.push(reg.R[now] + delta_R + delta_Rm)
 }
 
 function step_epidemic(Regions, curr_measures, travel) {
@@ -282,16 +282,18 @@ function self_test() {
     c_meas = new Measure_State()
 
     for (let n = 0; n < 5; n++) {
-        step_epidemic(Regions, c_meas, 0.01)
         console.log([tti_over_capacity(Regions), count_exposed(Regions), count_infectious(Regions), count_recovered(Regions)])
+        step_epidemic(Regions, c_meas, 0.01)
     }
 
     c_meas.test_trace_isolate = true
 
     for (let n = 0; n < 25; n++) {
-        step_epidemic(Regions, c_meas, 0.01)
         console.log([tti_over_capacity(Regions), count_exposed(Regions), count_infectious(Regions), count_recovered(Regions)])
+
+        step_epidemic(Regions, c_meas, 0.01)
     }
+    console.log([tti_over_capacity(Regions), count_exposed(Regions), count_infectious(Regions), count_recovered(Regions)])
 
 }
 
