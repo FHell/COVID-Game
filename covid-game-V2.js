@@ -275,12 +275,6 @@ function init_random_regions() {
     return Regions
 }
 
-function tes(){
-    return [1,2,3]
-}
-
-[a,b,c] = tes()
-
 function self_test() {
 
     Regions = init_random_regions()
