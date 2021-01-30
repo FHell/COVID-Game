@@ -20,8 +20,23 @@ Make the measures modify R and travel probability.
 
 
 */
-var PD = require("probability-distributions");
 
+function binom(N, p){
+    res = 0
+    for (let n = 0; n < N; n++) {
+        if (Math.random() < p) {res++}
+    }
+    return res
+}
+
+function neg_binom(r, p){
+    suc = 0
+    fai = 0
+    while (fai < r) {
+        if (Math.random() < p) {suc++} else {fai++}
+    }
+    return suc
+}
 
 class Region {
     constructor(N_S, N_E, N_I, N_Em, N_Im, N_R, N_total, trace_capacity, tag, name) {
@@ -129,43 +144,37 @@ function local_step(reg, r_mult, var_mult, tti) {
     local_var = (reg.S[now] / reg.total) * var_mult * cov_pars.var
 
     // Every exposed has an E_to_I probability to become infectious
-    delta_I = PD.rbinom(1, reg.E[now], cov_pars.E_to_I)[0]
-    delta_Im = PD.rbinom(1, reg.Em[now], cov_pars.E_to_I)[0]
+    delta_I = binom(reg.E[now], cov_pars.E_to_I)
+    delta_Im = binom(reg.Em[now], cov_pars.E_to_I)
 
     // Every infectious in the region will cause a negative binomial distribution of new infected today.
     // The sum of N iid negative binomials is a negative binomial with size parameter scaled by N
     
     // The variance must always be larger than the mean in this model.
-    //  The threshold 0.9 is arbitrary here, hopefully we wont hit this case with real parametrization.
-    if (local_var < 0.9 * local_r) {local_var = 0.9 * local_r}
+    //  The threshold 1.1 is arbitrary here, hopefully we wont hit this case with real parametrization.
+    if (local_var < 1.1 * local_r) {local_var = 1.1 * local_r}
 
     // Calculate the negative binomial parameters
     p = 1 - local_r/local_var
     size = prob_round((reg.I[now] + reg.travel_I) * (1 - p) / p + reg.background_rate)
+    delta_E = neg_binom(size, p)
 
+    if (local_var < 1.1 * local_rm) {local_var = 1.1 * local_rm}
 
-    // Because we are spreading over several days and our PD.rnbinom can not deal with non_integer
-    // sizes we have to special case small sizes.
-    if (size < 1) {delta_E = 0} else {
-    delta_E = PD.rnbinom(1, size, p)[0]}
-
-    if (local_var < 0.9 * local_rm) {local_var = 0.9 * local_rm}
     pm = 1 - local_rm/local_var
     sizem = prob_round((reg.Im[now] + reg.travel_Im) * (1 - pm) / pm  + reg.background_rate)
-    
-    if (sizem < 1) {delta_Em = 0} else {
-    delta_Em = PD.rnbinom(1, sizem, pm)[0]}
+    delta_Em = neg_binom(sizem, pm)
 
     // Every recovered has a recov probability to recover
-    delta_R = PD.rbinom(1, reg.I[now], cov_pars.recov)[0]
-    delta_Rm = PD.rbinom(1, reg.Im[now], cov_pars.recov)[0]
+    delta_R = binom(reg.I[now], cov_pars.recov)
+    delta_Rm = binom(reg.Im[now], cov_pars.recov)
 
 
     c1 = reg.S[now] - delta_E - delta_Em
     if (c1 < 0){
-        if (c1 < delta_E) {delta_E -= c1}
-        else if (c1 < delta_Em) {delta_Em -= c1}
-        else if (c1 < delta_Em + delta_E) {delta_Em -= c1 + delta_E; delta_E = 0}
+        if (-c1 < delta_E) {delta_E += c1}
+        else if (-c1 < delta_Em) {delta_Em += c1}
+        else if (-c1 < delta_Em + delta_E) {delta_Em += c1 + delta_E; delta_E = 0}
         else {delta_Em = reg.S[now]; delta_E = 0}
         }
 
@@ -233,7 +242,7 @@ function count_infected(Regions){
 function self_test() {
     Regions = []
 
-    for (let n = 0; n < 120; n++) {
+    for (let n = 0; n < 420; n++) {
         Regions.push(region_100k_u0_9_infected())
     }
 
