@@ -39,8 +39,8 @@ function neg_binom(r, p){
 }
 
 class Region {
+    
     constructor(N_S, N_E, N_I, N_Em, N_Im, N_R, N_total, trace_capacity, tag, name) {
-        console.assert(N_S + N_I, + N_R == N_total);
         
         // These should be arrays        
         this.S = N_S
@@ -63,35 +63,58 @@ class Region {
     }
 }
 
+
+function region_with_incidence(total, incidence, tag, name) {
+    let I = [incidence / 100000 * total];
+    let E = [I[0] * 0.7];
+    let R = [0];
+    let S = [total - I[0]];
+    return new Region(S, E, I, [0], [0], R, total, total * 0.01, tag, name);
+}
+
+
+
+possible_measures = {
+    gatherings_1000         : { desc: "Gatherings with up to max of 1000 people allowed" },
+    gatherings_100          : { desc: "Gatherings with up to max of 100 people allowed" },
+    gatherings_10           : { desc: "Gatherings with up to max of 10 people allowed" },
+    schools_unis_closed     : { desc: "Schools and Universities are closed" },
+    some_business_closed    : { desc: "Selected (high-traffic) buisnesses are closed" },
+    all_business_closed     : { desc: "All non-essential buisnesses are closed" },
+    test_trace_isolate      : { desc: "Trace & Isolate infected persons" },
+    stay_at_home            : { desc: "Strict 'stay at home' orders" },
+
+};
+
+
 // Measures taken from slide
 class Measure_State {
     constructor(){
-        this.gatherings_1000 = false
-        this.gatherings_100 = false
-        this.gatherings_10 = false
-        this.schools_unis_closed = false
-        this.some_business_closed = false
-        this.all_business_closed = false
-        this.test_trace_isolate = false
-        this.stay_at_home = false
+        Object.assign(this, possible_measures);
+        Object.keys(this).map(key => this[key].active = false);
+    }
+
+    toggle(key) {
+        this[key].active = !this[key].active;
     }
 }
 
 // translate the current measures into a relative scaling of R and var
 // To start with we assume they are proportional
 function measure_effect(cm) {
+    //console.log(cm);
     // This is how I interpret the slide. Might or might not be true:
     r_mult = 1.
-    if (cm.gatherings_10) {r_mult *= 1 - 0.2}
-    else if (cm.gatherings_100) {r_mult *= 1 - 0.25}
-    else if (cm.gatherings_1000) {r_mult *= 1 - 0.35}
+    if (cm.gatherings_10.active) {r_mult *= 1 - 0.2}
+    else if (cm.gatherings_100.active) {r_mult *= 1 - 0.25}
+    else if (cm.gatherings_1000.active) {r_mult *= 1 - 0.35}
 
-    if (cm.schools_unis_closed) {r_mult *= 1 - 0.4}
+    if (cm.schools_unis_closed.active) {r_mult *= 1 - 0.4}
     
-    if (cm.some_business_closed) {r_mult *= 1 - 0.2}
-    else if (cm.all_business_closed) {r_mult *= 1 - 0.3}
+    if (cm.some_business_closed.active) {r_mult *= 1 - 0.2}
+    else if (cm.all_business_closed.active) {r_mult *= 1 - 0.3}
 
-    if (cm.stay_at_home) {r_mult *= 1 - 0.1}
+    if (cm.stay_at_home.active) {r_mult *= 1 - 0.1}
 
     return [r_mult, r_mult]
 }
@@ -191,10 +214,10 @@ function step_epidemic(Regions, curr_measures, travel) {
     // travel is the fraction of people from a region that travel to a neighbouring region
     // in our first approximation these are simply all regions within 100km and travel is a constant fraction.
     // these people cause infections at the place they travel to as well as at home.
-    
-    now = reg.S.length - 1
-    
+        
     for (reg of Regions) {
+        let now = reg.S.length - 1;
+
         reg.travel_I = 0
         reg.travel_Im = 0
         for (nei of reg.neighbours){
@@ -208,14 +231,14 @@ function step_epidemic(Regions, curr_measures, travel) {
     r_var_mult = measure_effect(curr_measures)
 
     for (reg of Regions) {
-        local_step(reg, r_var_mult[0], r_var_mult[1], curr_measures.test_trace_isolate)
+        local_step(reg, r_var_mult[0], r_var_mult[1], curr_measures.test_trace_isolate.active)
     }
 
 }
 
 function region_100k_u0_9_infected() {
     total = 100000
-    trace_capacity = 1000
+    let trace_capacity = total * 0.01;
     I = [Math.round(10 * Math.random())]
     Im = [0]
     E = [0]
@@ -233,11 +256,13 @@ function connect_regions_randomly(Regions) {
     }
 }
 
-function count_infected(Regions){
-    infected = 0
-    for (reg of Regions) {infected += reg.I[reg.I.length - 1] + reg.Im[reg.Im.length - 1]}
-    return infected
-}
+function get_current(field)         { return field[field.length - 1]; } 
+function count(proj, r)             { return r.reduce((a, v) => a + proj(v), 0); }
+
+function exposed(reg)               { return get_current(reg.E) + get_current(reg.Em); }
+function infectious(reg)            { return get_current(reg.I) + get_current(reg.Im); }
+function infected(reg)              { return exposed(reg) + infectious(reg); }
+
 
 function self_test() {
     Regions = []
@@ -252,8 +277,8 @@ function self_test() {
 
     for (let n = 0; n < 30; n++) {
         step_epidemic(Regions, c_meas, 0.01)
-        console.log(count_infected(Regions))
+        console.log(count(infectious, Regions));
     }
 }
 
-self_test();
+//self_test();
