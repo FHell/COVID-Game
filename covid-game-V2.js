@@ -22,7 +22,7 @@ Make the measures modify R and travel probability.
 */
 
 function binom(N, p){
-    suc = 0
+    let suc = 0
     for (let n = 0; n < N; n++) {
         if (Math.random() < p) {suc++}
     }
@@ -30,8 +30,8 @@ function binom(N, p){
 }
 
 function neg_binom(r, p){
-    suc = 0
-    fai = 0
+    let suc = 0
+    let fai = 0
     while (fai < r) {
         if (Math.random() < p) {suc++} else {fai++}
     }
@@ -56,7 +56,7 @@ class Region {
         this.travel_I = 0 // total traveling infected neighbours
         this.travel_Im = 0 // total traveling infected neighbours with mutant
 
-        this.background_rate = 0.1
+        this.background_rate = 0.01
         this.tag = tag
         this.name = name
         this.neighbours = Array() // Needs to be populated later
@@ -81,10 +81,10 @@ class Measure_State {
 // To start with we assume they are proportional
 function measure_effect(cm) {
     // This is how I interpret the slide. Might or might not be true:
-    r_mult = 1.
-    if (cm.gatherings_10) {r_mult *= 1 - 0.2}
+    let r_mult = 1.
+    if (cm.gatherings_1000) {r_mult *= 1 - 0.2}
     else if (cm.gatherings_100) {r_mult *= 1 - 0.25}
-    else if (cm.gatherings_1000) {r_mult *= 1 - 0.35}
+    else if (cm.gatherings_10) {r_mult *= 1 - 0.35}
 
     if (cm.schools_unis_closed) {r_mult *= 1 - 0.4}
     
@@ -96,7 +96,7 @@ function measure_effect(cm) {
     return [r_mult, r_mult]
 }
 
-cov_pars = {R : 0.3, Rm : 0.45, var : 0.8, recov : 0.1, E_to_I : 0.5}
+cov_pars = {R : 0.3, Rm : 0.4, var : 0.8, recov : 0.1, E_to_I : 0.5}
 
 function tti_eff(infected, trace_capacity) {
     // rough model is Just dreamed up of test, trace, isolate efficiency,
@@ -111,7 +111,7 @@ function prob_round(x) {
     // This function rounds to the integer i below x with probability 1 - (x - i),
     // and to the integer above otherwise. In terms of linear expectation values
     // this is a smooth rounding function. :)
-    i = Math.floor(x)
+    let i = Math.floor(x)
     if (Math.random() < (x - i)) {return i + 1} else {return i}
 }
 
@@ -119,9 +119,9 @@ function get_deltas(E, I, I_travel, r, variance, cov_pars, background) {
     // Both binomial and negative binomial become approximately normal for large size
     // parameter. Possible performance improvement for large epidemics is to approximate the sampling.
 
-    delta_E = 0 // newly exposed
-    delta_I = 0 // newly infected
-    delta_R = 0 // newly removed
+    let delta_E = 0 // newly exposed
+    let delta_I = 0 // newly infected
+    let delta_R = 0 // newly removed
 
     // Every exposed has an E_to_I probability to become infectious
 
@@ -129,14 +129,20 @@ function get_deltas(E, I, I_travel, r, variance, cov_pars, background) {
 
     // The variance must always be larger than the mean in this model.
     //  The threshold 1.1 is arbitrary here, hopefully we wont hit this case with real parametrization.
-    if (variance < 1.1 * r) {var2 = 1.1 * r} else {var2 = variance}
+    if (variance < 1.1 * r) {var var2 = 1.1 * r} else {var var2 = variance}
 
     // Every infectious in the region will cause a negative binomial distribution of new infected today.
     // The sum of N iid negative binomials is a negative binomial with size parameter scaled by N
     
-    p = 1 - r/var2
-    size = prob_round((I + I_travel) * (1 - p) / p + background)
-    delta_E = neg_binom(size, p)
+    delta_E = binom(prob_round(I + I_travel + background), r)
+
+    // There is a bug in the dynamics below. TODO: Need to investigate this tomorrow.
+
+    // if (r == 0) {delta_E = 0} else {
+    //     let p = 1 - r/var2
+    //     let size = prob_round((I + I_travel + background) * (1 - p) / p)
+    //     delta_E = neg_binom(size, p)
+    // }
 
     delta_R = binom(I, cov_pars.recov)
 
@@ -145,43 +151,47 @@ function get_deltas(E, I, I_travel, r, variance, cov_pars, background) {
 
 function local_step(reg, r_mult, var_mult, tti) {
 
-    now = reg.S.length - 1
+    let now = reg.S.length - 1
+
+    let s_adjust = reg.S[now] / reg.total
 
     if (reg.S[now] < 0) {console.log("Something went wrong, S went negative")}
 
-    local_r  = (reg.S[now] / reg.total) * r_mult * cov_pars.R
-    local_rm = (reg.S[now] / reg.total) * r_mult * cov_pars.Rm
+    let local_r  = s_adjust * r_mult * cov_pars.R
+    let local_rm = s_adjust * r_mult * cov_pars.Rm
 
     if (tti) {
         local_r  *= tti_eff(reg.I[now] + reg.Im[now], reg.trace_capacity)
         local_rm *= tti_eff(reg.I[now] + reg.Im[now], reg.trace_capacity)
     }
 
-    local_var = (reg.S[now] / reg.total) * var_mult * cov_pars.var
+    let local_var = var_mult * cov_pars.var
 
-    deltas = get_deltas(reg.E[now], reg.I[now], reg.travel_I, local_r, local_var, cov_pars, reg.background_rate)
+    let deltas = get_deltas(reg.E[now], reg.I[now], reg.travel_I, local_r, local_var, cov_pars, reg.background_rate)
 
-    delta_E = deltas[0] // newly exposed
-    delta_I = deltas[1] // newly infectious
-    delta_R = deltas[2] // newly removed
+    let delta_E = deltas[0] // newly exposed
+    let delta_I = deltas[1] // newly infectious
+    let delta_R = deltas[2] // newly removed
 
-    deltas_m = get_deltas(reg.Em[now], reg.Im[now], reg.travel_Im, local_rm, local_var, cov_pars, reg.background_rate)
+    let deltas_m = get_deltas(reg.Em[now], reg.Im[now], reg.travel_Im, local_rm, local_var, cov_pars, reg.background_rate)
 
-    delta_Em = deltas_m[0] // newly exposed mutant
-    delta_Im = deltas_m[1] // newly infectious mutant
-    delta_Rm = deltas_m[2] // newly removed mutant
+    let delta_Em = deltas_m[0] // newly exposed mutant
+    let delta_Im = deltas_m[1] // newly infectious mutant
+    let delta_Rm = deltas_m[2] // newly removed mutant
 
     // Handle the case when the last susceptible in a region become exposed:
-    c1 = reg.S[now] - delta_E - delta_Em
-    if (c1 < 0){
-        if (-c1 < delta_E) {delta_E += c1}
-        else if (-c1 < delta_Em) {delta_Em += c1}
-        else if (-c1 < delta_Em + delta_E) {delta_Em += c1 + delta_E; delta_E = 0}
-        else {delta_Em = reg.S[now]; delta_E = 0}
-        }
+    let c1 = reg.S[now] - delta_E - delta_Em
 
-    // Push to the data arrays 
-    reg.S.push(reg.S[now] - delta_E - delta_Em)
+    if (c1 > 0){
+        reg.S.push(reg.S[now] - delta_E - delta_Em)
+    }
+    else {
+        reg.S.push(0)
+        delta_E = reg.S[now]
+        delta_Em = 0
+    }
+
+    // Push to the data arrays
     reg.E.push(reg.E[now] + delta_E - delta_I)
     reg.Em.push(reg.Em[now] + delta_Em - delta_Im)
     reg.I.push(reg.I[now] + delta_I - delta_R)
@@ -189,13 +199,14 @@ function local_step(reg, r_mult, var_mult, tti) {
     reg.R.push(reg.R[now] + delta_R + delta_Rm)
 }
 
+
 function step_epidemic(Regions, curr_measures, travel) {
 
     // travel is the fraction of people from a region that travel to a neighbouring region
     // in our first approximation these are simply all regions within 100km and travel is a constant fraction.
     // these people cause infections at the place they travel to as well as at home.
     
-    now = reg.S.length - 1
+    let now = reg.S.length - 1
     
     for (reg of Regions) {
         reg.travel_I = 0
@@ -214,6 +225,12 @@ function step_epidemic(Regions, curr_measures, travel) {
         local_step(reg, r_var_mult[0], r_var_mult[1], curr_measures.test_trace_isolate)
     }
 
+    // reg = Regions[2]
+    // now = reg.S.length - 1
+    // console.log(r_var_mult)
+    // console.log(tti_eff(reg.I[now] + reg.Im[now], reg.trace_capacity))
+
+ 
 }
 
 function region_100k_u0_9_infected() {
@@ -254,6 +271,13 @@ function count_recovered(Regions){
     return recovered
 }
 
+
+function count_susceptible(Regions){
+    c = 0
+    for (reg of Regions) {c += reg.S[reg.S.length - 1]}
+    return c
+}
+
 function tti_over_capacity(Regions){
     tti = 0
     for (reg of Regions) {
@@ -275,6 +299,10 @@ function init_random_regions() {
     return Regions
 }
 
+function log_reg(Regions){
+    console.log([tti_over_capacity(Regions), count_susceptible(Regions), count_exposed(Regions), count_infectious(Regions), count_recovered(Regions)])
+}
+
 function self_test() {
 
     Regions = init_random_regions()
@@ -282,18 +310,36 @@ function self_test() {
     c_meas = new Measure_State()
 
     for (let n = 0; n < 5; n++) {
-        console.log([tti_over_capacity(Regions), count_exposed(Regions), count_infectious(Regions), count_recovered(Regions)])
+        log_reg(Regions)
+
         step_epidemic(Regions, c_meas, 0.01)
     }
 
+    console.log("Starting test and trace program")
     c_meas.test_trace_isolate = true
 
-    for (let n = 0; n < 25; n++) {
-        console.log([tti_over_capacity(Regions), count_exposed(Regions), count_infectious(Regions), count_recovered(Regions)])
+    for (let n = 0; n < 5; n++) {
+        log_reg(Regions)
 
         step_epidemic(Regions, c_meas, 0.01)
     }
-    console.log([tti_over_capacity(Regions), count_exposed(Regions), count_infectious(Regions), count_recovered(Regions)])
+    console.log("Switching on all counter measures")
+
+    c_meas.gatherings_1000 = true
+    c_meas.gatherings_100 = true
+    c_meas.gatherings_10 = true
+    c_meas.schools_unis_closed = true
+    c_meas.some_business_closed = true
+    c_meas.all_business_closed = true
+    c_meas.test_trace_isolate = true
+    c_meas.stay_at_home = true
+
+    for (let n = 0; n < 25; n++) {
+        log_reg(Regions)
+
+        step_epidemic(Regions, c_meas, 0.01)
+    }
+    log_reg(Regions)
 
 }
 
