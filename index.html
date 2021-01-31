@@ -65,10 +65,8 @@ function slider_set_value(value) {
 var gState = null;
 
 function createElementFromHTML(html) {
-    console.log(html);
-    var div = document.createElement('div');
+    let div = document.createElement('div');
     div.innerHTML = html.trim();
-
     return div;
 }
 
@@ -83,6 +81,20 @@ initMeasures();
 function toggleMeasure(cb) {
     if (gState == null) { return; }
     gState.measures.toggle(cb.value);
+}
+
+function initParams() {
+    let cm = document.getElementById("param");
+    Object.entries(cov_pars).forEach((e, i) => cm.appendChild(createElementFromHTML(
+        `<input type="number" id="p${i}" step="0.1" min="0" max="1.0" onchange="changeParams(this);" value="${e[1].value}" cp_id="${e[0]}"><label for="p${i}">${e[1].desc}</label><br>`
+    )));
+}
+initParams();
+
+function changeParams(tf) {
+    if (gState == null) { return; }
+    cov_pars[tf.getAttribute("cp_id")].value = parseFloat(tf.value) || cov_pars[tf.getAttribute("cp_id")].def;
+    console.log(cov_pars);
 }
 
 //---- Map Rendering ----------------------------------------------------------------------------------------------------------
@@ -129,7 +141,7 @@ function draw_map(topo, state) {
     draw_map_d3(topo, function (f) {
         let ctag = f.properties.AGS;
         let cr = state.regions.find(e => e.tag == ctag);
-        return colorScale(infected(cr));
+        return colorScale(avg7_incidence(cr)); 
     });
 }
 

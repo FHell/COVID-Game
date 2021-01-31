@@ -72,7 +72,16 @@ function region_with_incidence(total, incidence, tag, name) {
     return new Region(S, E, I, [0], [0], R, total, total * 0.01, tag, name);
 }
 
+//-----------------------------------------------------------------------------------------------------------------------------
+// Those are reflected in the frontend you can enter new ones, but leave the structure alone
 
+cov_pars = { 
+    R:      { value: 0.15, def: 0.15, desc: "Base r-rate" },
+    Rm:     { value: 0.25, def: 0.25, desc: "Base r-rate(mutations)" },
+    var:    { value: 0.8,  def: 0.8,  desc: "Variance of the infection process" },
+    recov:  { value: 0.1,  def: 0.1,  desc: "recovery chance" },
+    E_to_I: { value: 0.5,  def: 0.5,  desc: "exposed to infectious chance" }
+};
 
 possible_measures = {
     gatherings_1000         : { desc: "Gatherings with up to max of 1000 people allowed" },
@@ -86,6 +95,7 @@ possible_measures = {
 
 };
 
+//-----------------------------------------------------------------------------------------------------------------------------
 
 // Measures taken from slide
 class Measure_State {
@@ -119,8 +129,6 @@ function measure_effect(cm) {
     return [r_mult, r_mult]
 }
 
-cov_pars = {R : 0.15, Rm : 0.25, var : 0.8, recov : 0.1, E_to_I : 0.5}
-
 function tti_eff(infected, trace_capacity) {
     // rough model is Just dreamed up of test, trace, isolate efficiency,
     // (because I'm to lazy to read the papers more thoroughly):
@@ -148,7 +156,7 @@ function get_deltas(E, I, I_travel, r, variance, cov_pars, background) {
 
     // Every exposed has an E_to_I probability to become infectious
 
-    delta_I = binom(E, cov_pars.E_to_I)
+    delta_I = binom(E, cov_pars.E_to_I.value)
 
     // The variance must always be larger than the mean in this model.
     //  The threshold 1.1 is arbitrary here, hopefully we wont hit this case with real parametrization.
@@ -180,15 +188,15 @@ function local_step(reg, r_mult, var_mult, tti) {
 
     if (reg.S[now] < 0) {console.log("Something went wrong, S went negative")}
 
-    let local_r  = s_adjust * r_mult * cov_pars.R
-    let local_rm = s_adjust * r_mult * cov_pars.Rm
+    let local_r  = s_adjust * r_mult * cov_pars.R.value
+    let local_rm = s_adjust * r_mult * cov_pars.Rm.value
 
     if (tti) {
         local_r  *= tti_eff(reg.I[now] + reg.Im[now], reg.trace_capacity)
         local_rm *= tti_eff(reg.I[now] + reg.Im[now], reg.trace_capacity)
     }
 
-    let local_var = var_mult * cov_pars.var
+    let local_var = var_mult * cov_pars.var.value
 
     let deltas = get_deltas(reg.E[now], reg.I[now], reg.travel_I, local_r, local_var, cov_pars, reg.background_rate)
 
@@ -284,11 +292,28 @@ function infectious(reg)            { return get_current(reg.I) + get_current(re
 function infected(reg)              { return exposed(reg) + infectious(reg); }
 function recovered(reg)             { return get_current(reg.R); }
 function susceptible(reg)           { return get_current(reg.S); }
+function total(reg)                 { return reg.total; }
 
 function count_infectious(Regions)  { return count(infectious, Regions); }
 function count_exposed(Regions)     { return count(exposed, Regions); }
 function count_recovered(Regions)   { return count(recovered, Regions); }
 function count_susceptible(Regions) { return count(susceptible, Regions); }
+
+//
+function average(arr)               { return arr.reduce((a, v) => a + v, 0) / arr.length; }
+
+// TODO: fix the projections above so that we can use them here
+function avg7_incidence(reg) {
+    let c = 0, s = 0;
+    for(let i = reg.I.length-1; i>=0; i--) {
+        c++;
+        s += ((reg.I[i] + reg.Im[i] + reg.E[i] + reg.Em[i]) / reg.total) * 100000;
+
+        if (c>7) { break; }
+    }
+    return (s / c) || 0;
+}
+
 
 function tti_over_capacity(Regions){
     let tti = 0
