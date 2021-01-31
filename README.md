@@ -5,8 +5,8 @@ Intuitive visualisation and understanding of how different countermeasures affec
 
 ## Team
 Fabio Fracassi -- @FabioFracassi   
-Frank Hellmann  -- @FHell   
-Nora Molekenthin  -- PIK    
+Frank Hellmann  -- @FHell PIK     
+Nora Molkenthin  -- @spinora PIK        
 Toni Mey -- @ppxasjsm -- Uni Edinburgh.  
 
 
