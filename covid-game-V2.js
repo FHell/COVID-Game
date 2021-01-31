@@ -56,7 +56,7 @@ class Region {
         this.travel_I = 0 // total traveling infected neighbours
         this.travel_Im = 0 // total traveling infected neighbours with mutant
 
-        this.background_rate = 0.01
+        this.background_rate = 0.001
         this.tag = tag
         this.name = name
         this.neighbours = Array() // Needs to be populated later
@@ -76,7 +76,7 @@ function region_with_incidence(total, incidence, tag, name) {
 // Those are reflected in the frontend you can enter new ones, but leave the structure alone
 
 cov_pars = { 
-    R:      { value: 0.15, def: 0.15, desc: "Base r-rate" },
+    R:      { value: 0.2, def: 0.2, desc: "Base r-rate" },
     Rm:     { value: 0.25, def: 0.25, desc: "Base r-rate(mutations)" },
     var:    { value: 0.8,  def: 0.8,  desc: "Variance of the infection process" },
     recov:  { value: 0.1,  def: 0.1,  desc: "recovery chance" },
@@ -175,7 +175,7 @@ function get_deltas(E, I, I_travel, r, variance, cov_pars, background) {
     //     delta_E = neg_binom(size, p)
     // }
 
-    delta_R = binom(I, cov_pars.recov)
+    delta_R = binom(I, cov_pars.recov.value)
 
     return [delta_E, delta_I, delta_R]
 }
@@ -256,11 +256,16 @@ function step_epidemic(Regions, curr_measures, travel) {
         local_step(reg, r_var_mult[0], r_var_mult[1], curr_measures.test_trace_isolate.active)
     }
 
-    // reg = Regions[2]
-    // now = reg.S.length - 1
-    // console.log(r_var_mult)
-    // console.log(tti_eff(reg.I[now] + reg.Im[now], reg.trace_capacity))
+    // debug output
+    // let re = Regions[2]
 
+    // let now = re.S.length - 1
+
+    // let s_adjust = re.S[now] / re.total
+
+    // let local_r  = s_adjust * r_var_mult[0] * cov_pars.R.value
+    // console.log(tti_eff(re.I[now] + re.Im[now], re.trace_capacity), r_var_mult[0], local_r)
+    // console.log(curr_measures.gatherings_1000.active)
  
 }
 
@@ -351,23 +356,23 @@ function self_test() {
     }
 
     console.log("Starting test and trace program")
-    c_meas.test_trace_isolate = true
+    c_meas.test_trace_isolate.active = true
 
-    for (let n = 0; n < 5; n++) {
+    for (let n = 0; n < 15; n++) {
         log_reg(Regions)
 
         step_epidemic(Regions, c_meas, 0.01)
     }
     console.log("Switching on all counter measures")
 
-    c_meas.gatherings_1000 = true
-    c_meas.gatherings_100 = true
-    c_meas.gatherings_10 = true
-    c_meas.schools_unis_closed = true
-    c_meas.some_business_closed = true
-    c_meas.all_business_closed = true
-    c_meas.test_trace_isolate = true
-    c_meas.stay_at_home = true
+    c_meas.gatherings_1000.active = true
+    c_meas.gatherings_100.active = true
+    c_meas.gatherings_10.active = true
+    c_meas.schools_unis_closed.active = true
+    c_meas.some_business_closed.active = true
+    c_meas.all_business_closed.active = true
+    c_meas.test_trace_isolate.active = true
+    c_meas.stay_at_home.active = true
 
     for (let n = 0; n < 25; n++) {
         log_reg(Regions)
@@ -378,4 +383,4 @@ function self_test() {
 
 }
 
-//self_test();
+self_test();
