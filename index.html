@@ -8,6 +8,47 @@
 <script src='https://unpkg.com/@turf/turf/turf.min.js'></script>
 
 <style>
+    @supports(-webkit-appearance: none) or (-moz-appearance: none) {
+  input[type='checkbox'],
+  input[type='radio'] {
+    --active: #1777af;
+    --active-inner: #fff;
+    --focus: 2px rgba(39, 94, 254, .3);
+    --border: #BBC1E1;
+    --border-hover: #275EFE;
+    --background: #fff;
+    --disabled: #F6F8FF;
+    --disabled-inner: #E1E6F9;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    height: 21px;
+    outline: none;
+    display: inline-block;
+    vertical-align: top;
+    position: relative;
+    margin: 2px;
+    cursor: pointer;
+    border: 1px solid var(--bc, var(--border));
+    background: var(--b, var(--background));
+    transition: background .3s, border-color .3s, box-shadow .2s;
+  }
+  input:after {
+      content: '';
+      display: block;
+      left: 0;
+      top: 0;
+      position: absolute;
+      transition: transform var(--d-t, .3s) var(--d-t-e, ease), opacity var(--d-o, .2s);
+    }
+input:checked {
+      --b: var(--active);
+      --bc: var(--active);
+      --d-o: .3s;
+      --d-t: .6s;
+      --d-t-e: cubic-bezier(.2, .85, .32, 1.2);
+    }
+
+    
 html, body              { } 
 .grid-container         { display: grid; grid-template-columns: 0.5fr 1fr; grid-template-rows: min-content 1fr; gap: 0px 0px;
                          grid-template-areas:
@@ -17,6 +58,27 @@ html, body              { }
 .map                    { grid-area: map; width:600px; height: 800px; }
 .time                   { grid-area: time; font-size: small;}
 .ctrl                   { grid-area: ctrl; }
+.switch {
+      width: 38px;
+      border-radius: 11px; }
+.switch:after {
+        left: 2px;
+        top: 2px;
+        border-radius: 50%;
+        width: 15px;
+        height: 15px;
+        background: var(--ab, var(--border));
+        transform: translateX(var(--x, 0));
+      }
+.switch:checked {
+        --ab: var(--active-inner);
+        --x: 17px;
+      }
+.legendspan { border: 1px solid #ccc; float: left; width: 16px; height: 16px; margin: 2px; border-radius: 4px;}
+.textfield{border: 1px solid #ccc; height: 21px; border-radius: 4px; margin: 2px; padding: 4px;}
+button{border: 0px; border-radius: 4px; background-color:#1777af; color:#FFFFFF; height:32px; min-width: 64px;}
+button:hover{background-color:#14608b;} 
+label{margin-left: 4px;}
 </style>
 </head>
 
@@ -32,6 +94,9 @@ Development at <a href="https://github.com/FHell/COVID-Game/">https://github.com
 
     <div id="cm"></div>
     <div id="param"></div>
+    <br>
+    <h6>Legend</h6>
+    <div id="legend"></div>
 </div>
 <div class="time">
     <label for="cd">Time (<span id="cdo"></span> days):</label></p>
@@ -73,7 +138,7 @@ function createElementFromHTML(html) {
 function initMeasures() {
     let cm = document.getElementById("cm");
     Object.entries(possible_measures).forEach((e, i) => cm.appendChild(createElementFromHTML(
-        `<input type="checkbox" id="m${i}" name="measure${i}" onchange="toggleMeasure(this);" value="${e[0]}"> <label for="m${i}">${e[1].desc}</label><br>`
+        `<input type="checkbox" id="m${i}" name="measure${i}" class="switch" onchange="toggleMeasure(this);" value="${e[0]}"> <label for="m${i}">${e[1].desc}</label><br>`
     )));
 }
 initMeasures();
@@ -86,7 +151,7 @@ function toggleMeasure(cb) {
 function initParams() {
     let cm = document.getElementById("param");
     Object.entries(cov_pars).forEach((e, i) => cm.appendChild(createElementFromHTML(
-        `<input type="number" id="p${i}" step="0.1" min="0" max="1.0" onchange="changeParams(this);" value="${e[1].value}" cp_id="${e[0]}"><label for="p${i}">${e[1].desc}</label><br>`
+        `<input class="textfield" type="number" id="p${i}" step="0.1" min="0" max="1.0" onchange="changeParams(this);" value="${e[1].value}" cp_id="${e[0]}"><label for="p${i}">${e[1].desc}</label><br>`
     )));
 }
 initParams();
@@ -111,9 +176,29 @@ var projection = d3.geoMercator()
 
 // Data and color scale
 var data = d3.map();
+var legendValues = [5, 25, 50, 100, 150, 200, 300, 400];
 var colorScale = d3.scaleThreshold()
-    .domain([5, 25, 50, 100, 150, 200, 300, 400])
-    .range(d3.schemeOrRd[9]);
+    .domain(legendValues)
+    .range(d3.schemeOrRd[legendValues.length + 1]);
+
+    function initLegend() {
+        let cm = document.getElementById('legend');
+        var firstLegendString = '< '.concat(legendValues[0].toString());
+        cm.appendChild(createElementFromHTML(
+            `<span class="legendspan" style="background-color:${colorScale(legendValues[0] - 1)};"></span> <label >${firstLegendString}</label><br>`
+        ));
+        for (var i = 1; i < legendValues.length; i++) {
+            var legendString = ''.concat(legendValues[i - 1].toString(), ' - ', legendValues[i].toString());
+            cm.appendChild(createElementFromHTML(
+                `<span class="legendspan" style="background-color:${colorScale(legendValues[i] - 1)};"></span> <label >${legendString}</label><br>`
+            ))
+        }
+        var lastLegendString = '> '.concat(legendValues[legendValues.length - 1].toString());
+        cm.appendChild(createElementFromHTML(
+            `<span class="legendspan" style="background-color:${colorScale(legendValues[legendValues.length - 1])};"></span> <label >${lastLegendString}</label><br>`
+        ));
+    }
+    initLegend();
 
 function draw_map_d3(topo, fill_fn) {
     // TODO: This recreates all geometry, we should only update the final fill state.
