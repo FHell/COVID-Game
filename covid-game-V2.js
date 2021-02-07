@@ -319,6 +319,7 @@ function avg7_incidence(reg) {
     return (s / c) || 0;
 }
 
+//tti = Test Trace Isolate
 
 function tti_over_capacity(Regions){
     let tti = 0
@@ -327,6 +328,58 @@ function tti_over_capacity(Regions){
     }
     return tti
 }
+
+function tti_global_effectiveness(Regions){
+    let tti_prevented = 0
+    let n = Regions.length
+    for (reg of Regions) {
+        let tti = tti_eff(infected(reg), reg.trace_capacity)
+        let tti_max = tti_eff(0, reg.trace_capacity)
+        tti_prevented += (1 - tti) / (1 - tti_max)
+    }
+    return tti_prevented / n
+}
+
+// First naive implementation, use projections once they can look into the past?
+function get_timelines(Regions){
+    // ToDo: check that length Regions > 0
+    let S = Regions[0].S
+    let E = Regions[0].E
+    let I = Regions[0].I
+    let Im = Regions[0].Im
+    let Em = Regions[0].Em
+    let R = Regions[0].R
+    for (let n = 1; n < Regions.length; n++){
+        add_to_array(S, Regions[n].S)
+        add_to_array(E, Regions[n].E)
+        add_to_array(I, Regions[n].I)
+        add_to_array(Im, Regions[n].Im)
+        add_to_array(Em, Regions[n].Em)
+        add_to_array(R, Regions[n].R)
+    }
+    return {S: S, E: E, I: I, Im: Im, Em: Em, R: R}
+}
+
+function add_to_array(a, b){
+    for (let n = 0; n < Math.min(a.length, b.length); n++){
+        a[n] += b[n]
+    }
+}
+
+// Things that we really want to show in the front end:
+// * Graphs of SEIR EmIm (and V once implemented) -> use get_timelines(Regions)
+// * Overall test trace isolate effectiveness (also timeline?) -> use tti_global_effectiveness(Regions)
+
+// Things we really want to show but that need a tiny bit of modeling:
+// * Total counter of Deaths and Long Covid cases results in R (simple proportional to start with)
+// * Total counter of people that went R while health system is overtaxed.
+
+// Nice to haves:
+// * On the map: Switch to mutation only.
+// * On the map: Switch to tti effectiveness.
+// * On the map: Switch to incidence rising/sinking.
+// * Graph of how many people every person infects.
+// * Change map to travel network.
 
 
 function init_random_regions() {
@@ -341,7 +394,7 @@ function init_random_regions() {
 }
 
 function log_reg(Regions){
-    console.log([tti_over_capacity(Regions), count_susceptible(Regions), count_exposed(Regions), count_infectious(Regions), count_recovered(Regions)])
+    console.log([tti_global_effectiveness(Regions), count_susceptible(Regions), count_exposed(Regions), count_infectious(Regions), count_recovered(Regions)])
 }
 
 function self_test() {
@@ -380,6 +433,8 @@ function self_test() {
         step_epidemic(Regions, c_meas, 0.01)
     }
     log_reg(Regions)
+
+    console.log(get_timelines(Regions).S.length)
 
 }
 
