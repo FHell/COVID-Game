@@ -144,29 +144,46 @@
 </head>
 
 <body>
-    <h2>PROTOTYPE - NOT A REALISTIC OR EVEN PLAUSIBEL MODEL (YET)</h2>
+<h2>PROTOTYPE</h2>
 
-    Development at <a href="https://github.com/FHell/COVID-Game/">https://github.com/FHell/COVID-Game/</a>.
+The underlying model is not tuned to real parameters yet, so effectiveness of measures, spreading to neighbouring counties, and time scales are off.
+It does include the following aspects of COVID-19:
+<ul>
+<li>Overdispersion and superspreader events.</li>
+<li>Travel between regions</li>
+<li>More virulent mutation</li>
+<li>Vaccinations</li>
+<li>Limits on the effectiveness of test and trace at high incidence</li>
+<li>Infections coming from outside Germany</li>
+</ul>
 
-    <div class="grid-container">
-        <svg class="map" id="germany"></svg>
-        <div class="ctrl">
-            <h6>Counter Measures</h6>
+It is based on a stochastic SEIR with a negative binomial for the infection step.
 
-            <div id="cm"></div>
-            <div id="param"></div>
-            <br>
-            <h6>Legend</h6>
-            <div id="legend"></div>
-        </div>
-        <div class="time">
-            <label for="cd">Time (<span id="cdo"></span> days):</label></p>
-            <input id="cd" type="range" min="1" max="200" value="0">
-            <button id="run" onclick="toggleRunning()">Run!</button>
-        </div>
-    </div>
+The color scale on the map shows the average of the last 7 days.
+
+Thus Players can try out themself how to sequence different level of measures to avoid the thrid lockdown, and the various trade-offs involved.
+
+Development at <a href="https://github.com/FHell/COVID-Game/">https://github.com/FHell/COVID-Game/</a>.
+
+<div class="grid-container">
+<svg class="map" id="germany"></svg>
+<div class="ctrl">
+    <h6>Counter Measures</h6> 
+
+    <div id="cm"></div>
+    <div id="param"></div>
+    <br>
+    <h6>Legend</h6>
+    <div id="legend"></div>
+</div>
+<div class="time">
+    <label for="cd">Time (<span id="cdo"></span> days):</label></p>
+    <input id="cd" type="range" min="1" max="200" value="0">
+    <button id="run" onclick="toggleRunning()">Run!</button>
+</div>
     <h6>Timelines</h6>
     <div id="timeline_plot"></div>
+</div>
 </body>
 
 <script src="covid-game-V2.js"></script>
@@ -351,14 +368,52 @@
 
     //---- Handle Simulation State ------------------------------------------------------------------------------------------------
 
-    class State {
-        constructor(regions, measures = new Measure_State()) {
-            this.regions = regions;
-            this.measures = measures;
-            this.step_no = 0;
-        }
+class State {
+    constructor(regions, measures = new Measure_State()) {
+        this.regions = regions;
+        this.measures = measures;
+        this.step_no = 0;
+        this.country = new Country()
     }
+}
 
+function draw_map(topo, state) {
+    draw_map_d3(topo, function (f) {
+        let ctag = f.properties.AGS;
+        let cr = state.regions.find(e => e.tag == ctag);
+        return colorScale(avg7_incidence(cr)); 
+    });
+}
+
+function simulate_step(state) {
+    state.step_no++;
+    step_epidemic(state.country, state.regions, state.measures, 0.01);
+}
+
+function draw_step(topo, state) {
+    if (state.step_no >= slider.max) { running = false; }
+    if (!running) { return; }
+
+    simulate_step(state);
+    draw_map(topo, state);
+
+    slider_set_value(state.step_no)
+    console.log("Rendered state", state);
+}
+
+
+//---- Load & Preprocess Data -------------------------------------------------------------------------------------------------
+
+var incidence = [];
+function findIncidence(ctag, def) {
+    let incr = incidence.find(e => e.tag == ctag);
+    if (incr == null)  {
+        console.log("No match for tag ", ctag, " => set to default ", def);
+        return def;
+    } else {
+        return incr.inc;
+    }
+}
 
 
     function draw_map(topo, state) {
@@ -371,7 +426,7 @@
 
     function simulate_step(state) {
         state.step_no++;
-        step_epidemic(state.regions, state.measures, 0.01);
+        step_epidemic(state.country, state.regions, state.measures, 0.01);
     }
 
     function draw_step(topo, state) {
@@ -380,7 +435,7 @@
 
         simulate_step(state);
         draw_map(topo, state);
-        update_timeline(get_timelines(state.regions).I);
+        update_timeline(state.country.I);
 
 
         slider_set_value(state.step_no)

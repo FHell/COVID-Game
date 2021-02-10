@@ -63,6 +63,20 @@ class Region {
     }
 }
 
+class Country {
+    constructor() {
+        
+        // These should be arrays        
+        this.S = []
+        this.E = []
+        this.I = []
+        this.Em = []
+        this.Im = []
+        this.R = []
+        
+        this.ratio_vac = 0
+    }
+}
 
 function region_with_incidence(total, incidence, tag, name) {
     let I = [incidence / 100000 * total];
@@ -231,7 +245,7 @@ function local_step(reg, r_mult, var_mult, tti) {
 }
 
 
-function step_epidemic(Regions, curr_measures, travel) {
+function step_epidemic(Country, Regions, curr_measures, travel) {
 
     // travel is the fraction of people from a region that travel to a neighbouring region
     // in our first approximation these are simply all regions within 100km and travel is a constant fraction.
@@ -255,6 +269,13 @@ function step_epidemic(Regions, curr_measures, travel) {
     for (reg of Regions) {
         local_step(reg, r_var_mult[0], r_var_mult[1], curr_measures.test_trace_isolate.active)
     }
+
+    Country.S.push(count(S_now, Regions))
+    Country.E.push(count(E_now, Regions))
+    Country.I.push(count(I_now, Regions))
+    Country.Em.push(count(Em_now, Regions))
+    Country.Im.push(count(Im_now, Regions))
+    Country.R.push(count(R_now, Regions))
 
     // debug output
     // let re = Regions[2]
@@ -304,6 +325,15 @@ function count_exposed(Regions)     { return count(exposed, Regions); }
 function count_recovered(Regions)   { return count(recovered, Regions); }
 function count_susceptible(Regions) { return count(susceptible, Regions); }
 
+function S_now(reg)               { return get_current(reg.S); }
+function E_now(reg)            { return get_current(reg.E); }
+function I_now(reg)              { return get_current(reg.I); }
+function Em_now(reg)            { return get_current(reg.Em); }
+function Im_now(reg)              { return get_current(reg.Im); }
+function R_now(reg)             { return get_current(reg.R); }
+
+
+
 //
 function average(arr)               { return arr.reduce((a, v) => a + v, 0) / arr.length; }
 
@@ -341,29 +371,15 @@ function tti_global_effectiveness(Regions){
 }
 
 // First naive implementation, use projections once they can look into the past?
-function get_timelines(Regions){
+function get_timelines(Country){
     // ToDo: check that length Regions > 0
-    let S = Regions[0].S
-    let E = Regions[0].E
-    let I = Regions[0].I
-    let Im = Regions[0].Im
-    let Em = Regions[0].Em
-    let R = Regions[0].R
-    for (let n = 1; n < Regions.length; n++){
-        add_to_array(S, Regions[n].S)
-        add_to_array(E, Regions[n].E)
-        add_to_array(I, Regions[n].I)
-        add_to_array(Im, Regions[n].Im)
-        add_to_array(Em, Regions[n].Em)
-        add_to_array(R, Regions[n].R)
-    }
+    let S = Country.S
+    let E = Country.E
+    let I = Country.I
+    let Im = Country.Im
+    let Em = Country.Em
+    let R = Country.R
     return {S: S, E: E, I: I, Im: Im, Em: Em, R: R}
-}
-
-function add_to_array(a, b){
-    for (let n = 0; n < Math.min(a.length, b.length); n++){
-        a[n] += b[n]
-    }
 }
 
 // Things that we really want to show in the front end:
@@ -396,16 +412,20 @@ function init_random_regions() {
 function log_reg(Regions){
     console.log([tti_global_effectiveness(Regions), count_susceptible(Regions), count_exposed(Regions), count_infectious(Regions), count_recovered(Regions)])
 }
+function log_country(country){
+    console.log([S_now(country), E_now(country), I_now(country), R_now(country)])
+}
 
 function self_test() {
 
     let Regions = init_random_regions()
     let c_meas = new Measure_State()
+    let country = new Country()
 
     for (let n = 0; n < 5; n++) {
         log_reg(Regions)
 
-        step_epidemic(Regions, c_meas, 0.01)
+        step_epidemic(country, Regions, c_meas, 0.01)
     }
 
     console.log("Starting test and trace program")
@@ -414,7 +434,7 @@ function self_test() {
     for (let n = 0; n < 15; n++) {
         log_reg(Regions)
 
-        step_epidemic(Regions, c_meas, 0.01)
+        step_epidemic(country, Regions, c_meas, 0.01)
     }
     console.log("Switching on all counter measures")
 
@@ -430,11 +450,11 @@ function self_test() {
     for (let n = 0; n < 25; n++) {
         log_reg(Regions)
 
-        step_epidemic(Regions, c_meas, 0.01)
+        step_epidemic(country, Regions, c_meas, 0.01)
     }
     log_reg(Regions)
-
-    console.log(get_timelines(Regions).S.length)
+    log_country(country)
+    console.log(get_timelines(country).S.length)
 
 }
 
