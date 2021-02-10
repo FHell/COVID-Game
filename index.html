@@ -236,6 +236,7 @@ class State {
         this.regions = regions;
         this.measures = measures;
         this.step_no = 0;
+        this.country = new Country()
     }
 }
 
@@ -249,7 +250,7 @@ function draw_map(topo, state) {
 
 function simulate_step(state) {
     state.step_no++;
-    step_epidemic(state.regions, state.measures, 0.01);
+    step_epidemic(state.country, state.regions, state.measures, 0.01);
 }
 
 function draw_step(topo, state) {
