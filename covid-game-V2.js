@@ -66,7 +66,10 @@ class Region {
 class Country {
     constructor() {
         
-        // These should be arrays        
+        // Here we can also save summary information that we want to show
+        // like highscore data, number of people who died, number of
+        // person-days in lockdown, etc...
+
         this.S = []
         this.E = []
         this.I = []
