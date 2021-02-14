@@ -92,6 +92,91 @@ function region_with_incidence(total, incidence, tag, name) {
 //-----------------------------------------------------------------------------------------------------------------------------
 // Those are reflected in the frontend you can enter new ones, but leave the structure alone
 
+// TODO
+// Make a full list of parameters, including thresholds:
+// TTI capcity as a fraction of incidence and as a global parameter
+// likewise for the background rate
+// Hospital cpacity likewise
+// Have a death/serious case rate for the first N infectious and a second one above that.
+// Scaled with the vaccination rate?
+// (we are vaccinating at risk people first, so this should be non-linear in the vaccination rate) 
+// General function for two rates with threshold interpolation?
+
+// functions to go back and forth between model parameters and observed quantities??
+
+
+class DynParameters {
+    constructor() {
+        // The parameters of the disease and the vaccination campaign
+
+        // Disease dynamics
+        this.mu = { value: 0.3, def: 0.3, desc: "Base R0: Number of people an infected infects on average." }
+        this.mu_m = { value: 0.4, def: 0.4, desc: "Base R0 for Mutant: Number of people someone infected by the mutant infects on average." }
+        this.I_to_R = { value: 0.1,  def: 0.1,  desc: "Daily rate of end of infectiousness (leading to recovery or death)." }
+        this.E_to_I = { value: 0.5,  def: 0.5,  desc: "Daily rate of infection breaking out among those carrying the virus (they become infectious for others)." }
+        this.k = { value: 0.8,  def: 0.8,  desc: "Overdispersion: Not everyone infects exactly R0 people, this parameter controls how much the number of infected varies from person to person." }
+        this.vac_rate = { value: 0.001,  def: 0.001,  desc: "Fraction of population vaccinated per day." }
+        this.vac_eff = { value: 0.8,  def: 0.8,  desc: "Fraction of infections prevented by vaccination." }
+        this.bck_rate = { value: 0.5,  def: 0.5,  desc: "Average number of infected coming into each region per day from outside the country." }
+        this.bck_rate_m = { value: 0.5,  def: 0.5,  desc: "Average number of mutant infected coming into each region per day from outside the country." }
+        
+        // Death model
+        this.hospital_capacity = { value: 0.001,  def: 0.001,  desc: "ICU capacity as a fraction of population." }
+        this.death_rate_1 = { value: 0.01,  def: 0.01,  desc: "Fraction of deaths for people within hospital capactity." }
+        this.death_rate_2 = { value: 0.05,  def: 0.05,  desc: "Fraction of deaths for people beyond hospital capactity." }
+        this.vulnerable = { value: 0.2,  def: 0.2,  desc: "Fraction of vulnerable in the population." }
+        this.non_vul_dr = { value: 0.1,  def: 0.1,  desc: "Rate of serious complications/deaths among non-vulnerable population relative to overall population (this modifier gradually kicks in as the vulnerable get vaccinated)."}
+    }
+}
+
+class DerivedProps {
+    constructor(dyn_pars) {
+        // Fomrulas not right yet...
+        this.time_to_infectious = { value: 1 / dyn_pars.E_to_I, desc: "Average time until an infected person becomes infectious."}
+        this.time_to_recovery = { value: 1 / dyn_pars.I_to_R, desc: "Average time a person is infectious."}
+        this.superspreader_20 = {value: dyn_pars.k, desc: "20% of people infect this fraction of the total amount of infected."}
+    }
+}
+
+function event(state, ch){
+    // idea: Save events as {pars : "dyn_pars", field: "mu", value: "0.3"} and call event(state, {pars : "measures", field: "mu", value: "0.3"})
+    state[ch.pars][ch.field] = ch.value
+}
+
+class MeasParameters {
+    constructor() {
+        // The parameters of the disease and the vaccination campaign
+
+        this.mu = { value: 0.3, def: 0.3, desc: "Base R0: Number of people an infected infects on average." }
+        this.mu_m = { value: 0.4, def: 0.4, desc: "Base R0 for Mutant: Number of people someone infected by the mutant infects on average." }
+        this.I_to_R = { value: 0.1,  def: 0.1,  desc: "Daily rate of end of infection (recovery or death)." }
+        this.E_to_I = { value: 0.5,  def: 0.5,  desc: "Daily rate of infection breaking out among those carrying the virus." }
+        this.k = { value: 0.8,  def: 0.8,  desc: "Overdispersion: Not everyone infects exactly R0 people, this parameter controls how much the number of infected varies from person to person." }
+        this.vac_rate = { value: 0.001,  def: 0.001,  desc: "Fraction of population vaccinated per day." }
+        this.vac_eff = { value: 0.8,  def: 0.8,  desc: "Fraction of infections prevented by vaccination." }
+        this.bck_rate = { value: 0.5,  def: 0.5,  desc: "Average number of infected coming into each region per day from outside the country." }
+        this.bck_rate_m = { value: 0.5,  def: 0.5,  desc: "Average number of mutant infected coming into each region per day from outside the country." }
+    }
+}
+
+class Meassures {
+    constructor() {
+        // The parameters of the disease and the vaccination campaign
+
+        this.mu = { value: 0.3, def: 0.3, desc: "Base R0: Number of people an infected infects on average." }
+        this.mu_m = { value: 0.4, def: 0.4, desc: "Base R0 for Mutant: Number of people someone infected by the mutant infects on average." }
+        this.I_to_R = { value: 0.1,  def: 0.1,  desc: "Daily rate of end of infection (recovery or death)." }
+        this.E_to_I = { value: 0.5,  def: 0.5,  desc: "Daily rate of infection breaking out among those carrying the virus." }
+        this.k = { value: 0.8,  def: 0.8,  desc: "Overdispersion: Not everyone infects exactly R0 people, this parameter controls how much the number of infected varies from person to person." }
+        this.vac_rate = { value: 0.001,  def: 0.001,  desc: "Fraction of population vaccinated per day." }
+        this.vac_eff = { value: 0.8,  def: 0.8,  desc: "Fraction of infections prevented by vaccination." }
+        this.bck_rate = { value: 0.5,  def: 0.5,  desc: "Average number of infected coming into each region per day from outside the country." }
+        this.bck_rate_m = { value: 0.5,  def: 0.5,  desc: "Average number of mutant infected coming into each region per day from outside the country." }
+    }
+}
+
+
+
 cov_pars = { 
     R:      { value: 0.2, def: 0.2, desc: "Base r-rate" },
     Rm:     { value: 0.25, def: 0.25, desc: "Base r-rate(mutations)" },
