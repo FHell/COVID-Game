@@ -86,12 +86,13 @@ class DynParameters {
 
 class DerivedProps {
     constructor(dyn_pars) {
-        // Formulas not right yet...
-        this.time_to_infectious = { value: 1 / dyn_pars.E_to_I, desc: "Average time until an infected person becomes infectious."}
-        this.time_to_recovery = { value: 1 / dyn_pars.I_to_R, desc: "Average time a person is infectious."}
-        this.superspreader_20 = {value: dyn_pars.k, desc: "20% of people infect this fraction of the total amount of infected."}
+        // Fomrulas not right yet...
+        this.time_to_infectious = { value: 1 + (1 - dyn_pars.E_to_I) / dyn_pars.E_to_I, desc: "Average time until an infected person becomes infectious."}
+        this.time_of_infectiousness = { value: 1 + (1 - dyn_pars.I_to_R) / dyn_pars.I_to_R, desc: "Average time a person is infectious."}
+        // this.superspreader_20 = {value: dyn_pars.k, desc: "20% of people infect this fraction of the total amount of infected."}
     }
 }
+
 
 // The core dynamic of the SEIR model is given next in terms of binomial and negative binomial distributions
 // Our negative binomial diefinition follows that of Wikipedia.
@@ -125,8 +126,10 @@ function get_deltas(E, I, I_travel, E_to_I, I_to_R, mu, k, v, background) {
 
     // we need to get the paremters r and p from the mu and k which we specify / which the measures
     // affect directly.
+    d_infect = ( 1 + (1 - dyn_pars.I_to_R) / dyn_pars.I_to_R )
+    mu_d = mu / d_infect
     r = 1/k
-    p = mu / (r + mu)
+    p = mu_d / (r + mu_d)
 
     I_eff = (1 - v) * (I + I_travel) + background
     size = prob_round(r * I_eff)
