@@ -68,7 +68,7 @@ class DynParameters {
         this.mu_m = { value: 0.4, def: 0.4, desc: "Base R0 for Mutant: Number of people someone infected by the mutant infects on average." }
         this.I_to_R = { value: 0.1,  def: 0.1,  desc: "Daily rate of end of infectiousness (leading to recovery or death)." }
         this.E_to_I = { value: 0.5,  def: 0.5,  desc: "Daily rate of infection breaking out among those carrying the virus (they become infectious for others)." }
-        this.k = { value: 0.8,  def: 0.8,  desc: "Overdispersion: Not everyone infects exactly R0 people, this parameter controls how much the number of infected varies from person to person." }
+        this.k = { value: 0.1,  def: 0.1,  desc: "Overdispersion: Not everyone infects exactly R0 people, this parameter controls how much the number of infected varies from person to person." }
         this.vac_rate = { value: 0.001,  def: 0.001,  desc: "Fraction of population vaccinated per day." }
         this.vac_eff = { value: 0.8,  def: 0.8,  desc: "Fraction of infections prevented by vaccination." }
         this.bck_rate = { value: 0.5,  def: 0.5,  desc: "Average number of infected coming into each region per day from outside the country." }
@@ -114,7 +114,7 @@ function neg_binom(r, p){
     return suc
 }
 
-function get_deltas(E, I, I_travel, E_to_I, I_to_R, r, p, v, background) {
+function get_deltas(E, I, I_travel, E_to_I, I_to_R, mu, k, v, background) {
 
     let delta_E = 0 // newly exposed
     let delta_I = 0 // newly infected
@@ -123,6 +123,11 @@ function get_deltas(E, I, I_travel, E_to_I, I_to_R, r, p, v, background) {
     delta_I = binom(E, E_to_I)
     delta_R = binom(I, I_to_R)
 
+    // we need to get the paremters r and p from the mu and k which we specify / which the measures
+    // affect directly.
+    r = 1/k
+    p = mu / (r + mu)
+
     I_eff = (1 - v) * (I + I_travel) + background
     size = prob_round(r * I_eff)
     delta_E = neg_binom(size, p)
@@ -130,17 +135,6 @@ function get_deltas(E, I, I_travel, E_to_I, I_to_R, r, p, v, background) {
     return [delta_E, delta_I, delta_R]
 }
 
-// we need to get the paremters r and p from the mu and k which we specify / which the measures
-// affect directly.
-
-function r_p_from_mu_k(mu, k){
-    sigma2 = 2 * mu
-    if (sigma2 < mu) { throw new RangeError("variance must be larger than mean") }
-    
-    p = 1 - mu / sigma2
-    r = mu * mu / (sigma2 - mu)
-    return [r, p]
-}
 
 /*
 The overall design is: We have a bunch of regions with exchange between them.
