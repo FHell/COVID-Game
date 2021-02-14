@@ -39,10 +39,10 @@ function neg_binom(r, p){
 }
 
 class Region {
-    
+
     constructor(N_S, N_E, N_I, N_Em, N_Im, N_R, N_total, trace_capacity, tag, name) {
-        
-        // These should be arrays        
+
+        // These should be arrays
         this.S = N_S
         this.E = N_E
         this.I = N_I
@@ -63,9 +63,9 @@ class Region {
     }
 }
 
-class Country {
+export class Country {
     constructor() {
-        
+
         // Here we can also save summary information that we want to show
         // like highscore data, number of people who died, number of
         // person-days in lockdown, etc...
@@ -76,12 +76,12 @@ class Country {
         this.Em = []
         this.Im = []
         this.R = []
-        
+
         this.ratio_vac = 0
     }
 }
 
-function region_with_incidence(total, incidence, tag, name) {
+export function region_with_incidence(total, incidence, tag, name) {
     let I = [incidence / 100000 * total];
     let E = [I[0] * 0.7];
     let R = [0];
@@ -92,7 +92,7 @@ function region_with_incidence(total, incidence, tag, name) {
 //-----------------------------------------------------------------------------------------------------------------------------
 // Those are reflected in the frontend you can enter new ones, but leave the structure alone
 
-cov_pars = { 
+export const cov_pars = {
     R:      { value: 0.2, def: 0.2, desc: "Base r-rate" },
     Rm:     { value: 0.25, def: 0.25, desc: "Base r-rate(mutations)" },
     var:    { value: 0.8,  def: 0.8,  desc: "Variance of the infection process" },
@@ -100,7 +100,7 @@ cov_pars = {
     E_to_I: { value: 0.5,  def: 0.5,  desc: "exposed to infectious chance" }
 };
 
-possible_measures = {
+export const possible_measures = {
     gatherings_1000         : { desc: "Gatherings with up to max of 1000 people allowed" },
     gatherings_100          : { desc: "Gatherings with up to max of 100 people allowed" },
     gatherings_10           : { desc: "Gatherings with up to max of 10 people allowed" },
@@ -109,13 +109,12 @@ possible_measures = {
     all_business_closed     : { desc: "All non-essential buisnesses are closed" },
     test_trace_isolate      : { desc: "Trace & Isolate infected persons" },
     stay_at_home            : { desc: "Strict 'stay at home' orders" },
-
 };
 
 //-----------------------------------------------------------------------------------------------------------------------------
 
 // Measures taken from slide
-class Measure_State {
+export class Measure_State {
     constructor(){
         Object.assign(this, possible_measures);
         Object.keys(this).map(key => this[key].active = false);
@@ -137,7 +136,7 @@ function measure_effect(cm) {
     else if (cm.gatherings_10.active) {r_mult *= 1 - 0.35}
 
     if (cm.schools_unis_closed.active) {r_mult *= 1 - 0.4}
-    
+
     if (cm.some_business_closed.active) {r_mult *= 1 - 0.2}
     else if (cm.all_business_closed.active) {r_mult *= 1 - 0.3}
 
@@ -181,7 +180,7 @@ function get_deltas(E, I, I_travel, r, variance, cov_pars, background) {
 
     // Every infectious in the region will cause a negative binomial distribution of new infected today.
     // The sum of N iid negative binomials is a negative binomial with size parameter scaled by N
-    
+
     delta_E = binom(prob_round(I + I_travel + background), r)
 
     // There is a bug in the dynamics below. TODO: Need to investigate this tomorrow.
@@ -248,18 +247,18 @@ function local_step(reg, r_mult, var_mult, tti) {
 }
 
 
-function step_epidemic(Country, Regions, curr_measures, travel) {
+export function step_epidemic(Country, Regions, curr_measures, travel) {
 
     // travel is the fraction of people from a region that travel to a neighbouring region
     // in our first approximation these are simply all regions within 100km and travel is a constant fraction.
     // these people cause infections at the place they travel to as well as at home.
-        
-    for (reg of Regions) {
+
+    for (let reg of Regions) {
         let now = reg.S.length - 1;
 
         reg.travel_I = 0
         reg.travel_Im = 0
-        for (nei of reg.neighbours){
+        for (let nei of reg.neighbours){
             if (nei.dist < 100 && reg != Regions[nei.index]) {
                 reg.travel_I += Math.round(travel * Regions[nei.index].I[now])
                 reg.travel_Im += Math.round(travel * Regions[nei.index].Im[now])
@@ -269,7 +268,7 @@ function step_epidemic(Country, Regions, curr_measures, travel) {
 
     let r_var_mult = measure_effect(curr_measures)
 
-    for (reg of Regions) {
+    for (let reg of Regions) {
         local_step(reg, r_var_mult[0], r_var_mult[1], curr_measures.test_trace_isolate.active)
     }
 
@@ -290,7 +289,7 @@ function step_epidemic(Country, Regions, curr_measures, travel) {
     // let local_r  = s_adjust * r_var_mult[0] * cov_pars.R.value
     // console.log(tti_eff(re.I[now] + re.Im[now], re.trace_capacity), r_var_mult[0], local_r)
     // console.log(curr_measures.gatherings_1000.active)
- 
+
 }
 
 function region_100k_u0_9_infected() {
@@ -307,13 +306,13 @@ function region_100k_u0_9_infected() {
 
 function connect_regions_randomly(Regions) {
     let n_reg = Regions.length
-    for (reg of Regions){
+    for (let reg of Regions) {
         for (let n = 0; n < n_reg; n++)
             reg.neighbours.push({dist: Math.random() * 500, index: n})
     }
 }
 
-function get_current(field)         { return field[field.length - 1]; } 
+function get_current(field)         { return field[field.length - 1]; }
 function count(proj, r)             { return r.reduce((a, v) => a + proj(v), 0); }
 
 function exposed(reg)               { return get_current(reg.E) + get_current(reg.Em); }
@@ -341,7 +340,7 @@ function R_now(reg)             { return get_current(reg.R); }
 function average(arr)               { return arr.reduce((a, v) => a + v, 0) / arr.length; }
 
 // TODO: fix the projections above so that we can use them here
-function avg7_incidence(reg) {
+export function avg7_incidence(reg) {
     let c = 0, s = 0;
     for(let i = reg.I.length-1; i>=0; i--) {
         c++;
@@ -365,7 +364,7 @@ function tti_over_capacity(Regions){
 function tti_global_effectiveness(Regions){
     let tti_prevented = 0
     let n = Regions.length
-    for (reg of Regions) {
+    for (let reg of Regions) {
         let tti = tti_eff(infected(reg), reg.trace_capacity)
         let tti_max = tti_eff(0, reg.trace_capacity)
         tti_prevented += (1 - tti) / (1 - tti_max)

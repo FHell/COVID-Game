@@ -1,0 +1,97 @@
+@supports (-webkit-appearance: none) or (-moz-appearance: none) {
+  input[type='checkbox'],
+  input[type='radio'] {
+    --active: #1777af;
+    --active-inner: #fff;
+    --focus: 2px rgba(39, 94, 254, .3);
+    --border: #BBC1E1;
+    --border-hover: #275EFE;
+    --background: #fff;
+    --disabled: #F6F8FF;
+    --disabled-inner: #E1E6F9;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    height: 21px;
+    outline: none;
+    display: inline-block;
+    vertical-align: top;
+    position: relative;
+    margin: 2px;
+    cursor: pointer;
+    border: 1px solid var(--bc, var(--border));
+    background: var(--b, var(--background));
+    transition: background .3s, border-color .3s, box-shadow .2s; }
+  input:after {
+    content: '';
+    display: block;
+    left: 0;
+    top: 0;
+    position: absolute;
+    transition: transform var(--d-t, 0.3s) var(--d-t-e, ease), opacity var(--d-o, 0.2s); }
+  input:checked {
+    --b: var(--active);
+    --bc: var(--active);
+    --d-o: .3s;
+    --d-t: .6s;
+    --d-t-e: cubic-bezier(.2, .85, .32, 1.2); }
+  .grid-container {
+    display: grid;
+    grid-template-columns: 0.5fr 1fr;
+    grid-template-rows: min-content 1fr;
+    gap: 0px 0px;
+    grid-template-areas: "ctrl time" "ctrl map"; }
+  .map {
+    grid-area: map;
+    width: 600px;
+    height: 800px; }
+  .time {
+    grid-area: time;
+    font-size: small; }
+  .ctrl {
+    grid-area: ctrl; }
+  .switch {
+    width: 38px;
+    border-radius: 11px; }
+  .switch:after {
+    left: 2px;
+    top: 2px;
+    border-radius: 50%;
+    width: 15px;
+    height: 15px;
+    background: var(--ab, var(--border));
+    transform: translateX(var(--x, 0)); }
+  .switch:checked {
+    --ab: var(--active-inner);
+    --x: 17px; }
+  .legendspan {
+    border: 1px solid #ccc;
+    float: left;
+    width: 16px;
+    height: 16px;
+    margin-left: 2px;
+    margin-right: 2px;
+    border-radius: 4px; }
+  .line {
+    fill: none;
+    stroke: steelblue;
+    stroke-width: 2px; }
+  .textfield {
+    border: 1px solid #ccc;
+    height: 21px;
+    border-radius: 4px;
+    margin: 2px;
+    padding: 4px; }
+  button {
+    border: 0px;
+    border-radius: 4px;
+    background-color: #1777af;
+    color: #FFFFFF;
+    height: 32px;
+    min-width: 64px; }
+  button:hover {
+    background-color: #14608b; }
+  label {
+    margin-left: 4px; } }
+
+
+/*# sourceMappingURL=main.673e778d924c2b90c738.css.map*/
