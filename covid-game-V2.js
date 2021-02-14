@@ -1,3 +1,147 @@
+// Core data structures
+
+// We have the state of the Country and of the individual regions first.
+// These contain the timelines for various quantities, as well as some
+// basic information attached to either.
+
+class Country {
+    constructor() {
+        
+        // Here we can also save summary information that we want to show
+        // like highscore data, number of people who died, number of
+        // person-days in lockdown, etc...
+
+        this.S = []
+        this.E = []
+        this.I = []
+        this.Em = []
+        this.Im = []
+        this.R = []
+        
+        this.ratio_vac = []
+        this.deaths = []
+    }
+}
+
+class Region {
+    
+    constructor(N_S, N_E, N_I, N_Em, N_Im, N_R, N_total, tag, name) {
+        
+        // These should be arrays        
+        this.S = N_S
+        this.E = N_E
+        this.I = N_I
+        this.Em = N_Em
+        this.Im = N_Im
+        this.R = N_R
+
+        this.total = N_total
+
+        this.travel_I = 0 // total traveling infected neighbours
+        this.travel_Im = 0 // total traveling infected neighbours with mutant
+
+        this.tag = tag
+        this.name = name
+        this.neighbours = Array() // Needs to be populated later
+    }
+}
+
+// An important way to initialize a region is given an incidence and a total number of people
+
+function region_with_incidence(total, incidence, tag, name) {
+    let I = [incidence / 100000 * total];
+    let E = [I[0] * 0.7];
+    let R = [0];
+    let S = [total - I[0]];
+    return new Region(S, E, I, [0], [0], R, total, tag, name);
+}
+
+
+// We then have the parameters for the disease and death model, as well as some properties derived from the parameters.
+
+class DynParameters {
+    constructor() {
+        // The parameters of the disease and the vaccination campaign
+
+        // Disease dynamics
+        this.mu = { value: 0.3, def: 0.3, desc: "Base R0: Number of people an infected infects on average." }
+        this.mu_m = { value: 0.4, def: 0.4, desc: "Base R0 for Mutant: Number of people someone infected by the mutant infects on average." }
+        this.I_to_R = { value: 0.1,  def: 0.1,  desc: "Daily rate of end of infectiousness (leading to recovery or death)." }
+        this.E_to_I = { value: 0.5,  def: 0.5,  desc: "Daily rate of infection breaking out among those carrying the virus (they become infectious for others)." }
+        this.k = { value: 0.8,  def: 0.8,  desc: "Overdispersion: Not everyone infects exactly R0 people, this parameter controls how much the number of infected varies from person to person." }
+        this.vac_rate = { value: 0.001,  def: 0.001,  desc: "Fraction of population vaccinated per day." }
+        this.vac_eff = { value: 0.8,  def: 0.8,  desc: "Fraction of infections prevented by vaccination." }
+        this.bck_rate = { value: 0.5,  def: 0.5,  desc: "Average number of infected coming into each region per day from outside the country." }
+        this.bck_rate_m = { value: 0.5,  def: 0.5,  desc: "Average number of mutant infected coming into each region per day from outside the country." }
+        
+        // Death model
+        this.hospital_capacity = { value: 0.001,  def: 0.001,  desc: "ICU capacity as a fraction of population." }
+        this.death_rate_1 = { value: 0.01,  def: 0.01,  desc: "Fraction of deaths for people within hospital capactity." }
+        this.death_rate_2 = { value: 0.05,  def: 0.05,  desc: "Fraction of deaths for people beyond hospital capactity." }
+        this.vulnerable = { value: 0.2,  def: 0.2,  desc: "Fraction of vulnerable in the population." }
+        this.non_vul_dr = { value: 0.1,  def: 0.1,  desc: "Rate of serious complications/deaths among non-vulnerable population relative to overall population (this modifier gradually kicks in as the vulnerable get vaccinated)."}
+    }
+}
+
+
+class DerivedProps {
+    constructor(dyn_pars) {
+        // Formulas not right yet...
+        this.time_to_infectious = { value: 1 / dyn_pars.E_to_I, desc: "Average time until an infected person becomes infectious."}
+        this.time_to_recovery = { value: 1 / dyn_pars.I_to_R, desc: "Average time a person is infectious."}
+        this.superspreader_20 = {value: dyn_pars.k, desc: "20% of people infect this fraction of the total amount of infected."}
+    }
+}
+
+// The core dynamic of the SEIR model is given next in terms of binomial and negative binomial distributions
+// Our negative binomial diefinition follows that of Wikipedia.
+
+function binom(N, p){
+    let suc = 0
+    for (let n = 0; n < N; n++) {
+        if (Math.random() < p) {suc++}
+    }
+    return suc
+}
+
+function neg_binom(r, p){
+    if (p == 0.) {console.log("Negative binomial was called with p = 0"); return 0} // Convenient failure mode
+    let suc = 0;
+    let fai = 0;
+    while (fai < r) {
+        if (Math.random() < p) {suc++} else {fai++}
+    }
+    return suc
+}
+
+function get_deltas(E, I, I_travel, E_to_I, I_to_R, r, p, v, background) {
+
+    let delta_E = 0 // newly exposed
+    let delta_I = 0 // newly infected
+    let delta_R = 0 // newly removed
+
+    delta_I = binom(E, E_to_I)
+    delta_R = binom(I, I_to_R)
+
+    I_eff = (1 - v) * (I + I_travel) + background
+    size = prob_round(r * I_eff)
+    delta_E = neg_binom(size, p)
+
+    return [delta_E, delta_I, delta_R]
+}
+
+// we need to get the paremters r and p from the mu and k which we specify / which the measures
+// affect directly.
+
+function r_p_from_mu_k(mu, k){
+    sigma2 = 2 * mu
+    if (sigma2 < mu) { throw new RangeError("variance must be larger than mean") }
+    
+    p = 1 - mu / sigma2
+    r = mu * mu / (sigma2 - mu)
+    return [r, p]
+}
+
 /*
 The overall design is: We have a bunch of regions with exchange between them.
 These Regions follow some stochastic dynamic. We have countermeasures that
@@ -38,56 +182,6 @@ function neg_binom(r, p){
     return suc
 }
 
-class Region {
-    
-    constructor(N_S, N_E, N_I, N_Em, N_Im, N_R, N_total, trace_capacity, tag, name) {
-        
-        // These should be arrays        
-        this.S = N_S
-        this.E = N_E
-        this.I = N_I
-        this.Em = N_Em
-        this.Im = N_Im
-        this.R = N_R
-
-        this.total = N_total
-        this.trace_capacity = trace_capacity
-
-        this.travel_I = 0 // total traveling infected neighbours
-        this.travel_Im = 0 // total traveling infected neighbours with mutant
-
-        this.background_rate = 0.001
-        this.tag = tag
-        this.name = name
-        this.neighbours = Array() // Needs to be populated later
-    }
-}
-
-class Country {
-    constructor() {
-        
-        // Here we can also save summary information that we want to show
-        // like highscore data, number of people who died, number of
-        // person-days in lockdown, etc...
-
-        this.S = []
-        this.E = []
-        this.I = []
-        this.Em = []
-        this.Im = []
-        this.R = []
-        
-        this.ratio_vac = 0
-    }
-}
-
-function region_with_incidence(total, incidence, tag, name) {
-    let I = [incidence / 100000 * total];
-    let E = [I[0] * 0.7];
-    let R = [0];
-    let S = [total - I[0]];
-    return new Region(S, E, I, [0], [0], R, total, total * 0.01, tag, name);
-}
 
 //-----------------------------------------------------------------------------------------------------------------------------
 // Those are reflected in the frontend you can enter new ones, but leave the structure alone
@@ -104,39 +198,6 @@ function region_with_incidence(total, incidence, tag, name) {
 
 // functions to go back and forth between model parameters and observed quantities??
 
-
-class DynParameters {
-    constructor() {
-        // The parameters of the disease and the vaccination campaign
-
-        // Disease dynamics
-        this.mu = { value: 0.3, def: 0.3, desc: "Base R0: Number of people an infected infects on average." }
-        this.mu_m = { value: 0.4, def: 0.4, desc: "Base R0 for Mutant: Number of people someone infected by the mutant infects on average." }
-        this.I_to_R = { value: 0.1,  def: 0.1,  desc: "Daily rate of end of infectiousness (leading to recovery or death)." }
-        this.E_to_I = { value: 0.5,  def: 0.5,  desc: "Daily rate of infection breaking out among those carrying the virus (they become infectious for others)." }
-        this.k = { value: 0.8,  def: 0.8,  desc: "Overdispersion: Not everyone infects exactly R0 people, this parameter controls how much the number of infected varies from person to person." }
-        this.vac_rate = { value: 0.001,  def: 0.001,  desc: "Fraction of population vaccinated per day." }
-        this.vac_eff = { value: 0.8,  def: 0.8,  desc: "Fraction of infections prevented by vaccination." }
-        this.bck_rate = { value: 0.5,  def: 0.5,  desc: "Average number of infected coming into each region per day from outside the country." }
-        this.bck_rate_m = { value: 0.5,  def: 0.5,  desc: "Average number of mutant infected coming into each region per day from outside the country." }
-        
-        // Death model
-        this.hospital_capacity = { value: 0.001,  def: 0.001,  desc: "ICU capacity as a fraction of population." }
-        this.death_rate_1 = { value: 0.01,  def: 0.01,  desc: "Fraction of deaths for people within hospital capactity." }
-        this.death_rate_2 = { value: 0.05,  def: 0.05,  desc: "Fraction of deaths for people beyond hospital capactity." }
-        this.vulnerable = { value: 0.2,  def: 0.2,  desc: "Fraction of vulnerable in the population." }
-        this.non_vul_dr = { value: 0.1,  def: 0.1,  desc: "Rate of serious complications/deaths among non-vulnerable population relative to overall population (this modifier gradually kicks in as the vulnerable get vaccinated)."}
-    }
-}
-
-class DerivedProps {
-    constructor(dyn_pars) {
-        // Fomrulas not right yet...
-        this.time_to_infectious = { value: 1 / dyn_pars.E_to_I, desc: "Average time until an infected person becomes infectious."}
-        this.time_to_recovery = { value: 1 / dyn_pars.I_to_R, desc: "Average time a person is infectious."}
-        this.superspreader_20 = {value: dyn_pars.k, desc: "20% of people infect this fraction of the total amount of infected."}
-    }
-}
 
 function event(state, ch){
     // idea: Save events as {pars : "dyn_pars", field: "mu", value: "0.3"} and call event(state, {pars : "measures", field: "mu", value: "0.3"})
