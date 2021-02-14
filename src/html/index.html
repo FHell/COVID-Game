@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+    <script src="https://d3js.org/d3.v4.js"></script>
+    <script src="https://d3js.org/d3-scale-chromatic.v2.min.js"></script>
+    <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+    <script src='https://unpkg.com/@turf/turf/turf.min.js'></script>
+</head>
+<body>
+<h2>PROTOTYPE</h2>
+
+The underlying model is not tuned to real parameters yet, so effectiveness of measures, spreading to neighbouring counties, and time scales are off.
+It does include the following aspects of COVID-19:
+<ul>
+<li>Overdispersion and superspreader events.</li>
+<li>Travel between regions</li>
+<li>More virulent mutation</li>
+<li>Vaccinations</li>
+<li>Limits on the effectiveness of test and trace at high incidence</li>
+<li>Infections coming from outside Germany</li>
+</ul>
+
+It is based on a stochastic SEIR with a negative binomial for the infection step.
+
+The color scale on the map shows the average of the last 7 days.
+
+Thus Players can try out themself how to sequence different level of measures to avoid the thrid lockdown, and the various trade-offs involved.
+
+Development at <a href="https://github.com/FHell/COVID-Game/">https://github.com/FHell/COVID-Game/</a>.
+
+<div class="grid-container">
+<svg class="map" id="germany"></svg>
+<div class="ctrl">
+    <h6>Counter Measures</h6>
+
+    <div id="cm"></div>
+    <div id="param"></div>
+    <br>
+    <h6>Legend</h6>
+    <div id="legend"></div>
+</div>
+<div class="time">
+    <label for="cd">Time (<span id="cdo"></span> days):</label></p>
+    <input id="cd" type="range" min="1" max="200" value="0">
+    <button id="run">Run!</button>
+</div>
+    <h6>Timelines</h6>
+    <div id="timeline_plot"></div>
+</div>
+</body>

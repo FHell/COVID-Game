@@ -1,0 +1,33 @@
+{
+  "name": "covid-game",
+  "version": "0.1.0",
+  "description": "Intuitive visualisation and understanding of how different countermeasures affect the spread of coronavirus. Interactive JS of underlying SEIR model.",
+  "main": "index.html",
+  "scripts": {
+    "build": "npx webpack",
+    "watch": "npx webpack --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FHell/COVID-Game.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/FHell/COVID-Game/issues"
+  },
+  "homepage": "https://fhell.github.io/COVID-Game/",
+  "devDependencies": {
+    "clean-webpack-plugin": "^3.0.0",
+    "css-loader": "^5.0.2",
+    "file-loader": "^6.2.0",
+    "html-webpack-plugin": "^5.1.0",
+    "mini-css-extract-plugin": "^1.3.6",
+    "node-sass": "^5.0.0",
+    "sass-loader": "^11.0.1",
+    "webpack": "^5.21.2",
+    "webpack-cli": "^4.5.0"
+  }
+}
