@@ -15,7 +15,12 @@ module.exports = {
           test: /\.(scss|css)$/,
           exclude: /node_modules/,
           use: [
-            MiniCssExtractPlugin.loader,
+            {
+              loader: MiniCssExtractPlugin.loader,
+              options: {
+                publicPath: '',
+              },
+            },
             {
               loader: 'css-loader',
               options: {
@@ -29,6 +34,10 @@ module.exports = {
               },
             },
           ],
+        },
+        {
+          test: /\.(png|svg|jpg|jpeg|gif)$/i,
+          type: 'asset/resource',
         },
     ],
   },

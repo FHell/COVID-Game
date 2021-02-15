@@ -17,13 +17,21 @@ slider.disable;
 
 var running = false;  // TODO: this should be in State
 var runner = document.getElementById("run");
-function toggleRunning() {
+const RunButtonContents = {
+  PAUSED: "<i class='icon ic-run'></i> Run the simulation",
+  RUNNING: "<i class='icon ic-pause'></i> Pause the simulation",
+}
+function updateRunButton() {
+  runner.innerHTML = running ? RunButtonContents.RUNNING : RunButtonContents.PAUSED;
+}
+function toggleRunButton() {
   running = !running;
-  runner.innerHTML = running ? "Pause" : "Run";
+  updateRunButton();
 }
 
 var runButton = document.getElementById("run");
-runButton.addEventListener('click', toggleRunning);
+runButton.addEventListener('click', toggleRunButton);
+updateRunButton();
 
 function slider_set_value(value) {
   output.innerHTML = value;
@@ -39,19 +47,21 @@ function createElementFromHTML(html) {
 }
 
 function initMeasures() {
-  let cm = document.getElementById("cm");
+  let cm = document.getElementById("countermeasures");
   Object.entries(possible_measures).forEach((e, i) => {
     const toggle = document.createElement('input');
     toggle.setAttribute('type', 'checkbox');
     toggle.setAttribute('id', `m${i}`);
     toggle.setAttribute('name', `measure${i}`);
-    toggle.setAttribute('class', `switch`);
+    toggle.setAttribute('class', `custom-control-input`);
     toggle.setAttribute('value', e[0]);
     toggle.addEventListener('change', () => { toggleMeasure(e[0]); });
     const label = document.createElement('label');
     label.setAttribute('for', `m${i}`);
+    label.setAttribute('class', 'custom-control-label');
     label.innerText = e[1].desc;
     const container = document.createElement('div');
+    container.setAttribute('class', 'countermeasure custom-control custom-switch custom-switch-md')
     container.appendChild(toggle);
     container.appendChild(label);
     cm.appendChild(container);
@@ -65,10 +75,10 @@ function toggleMeasure(cb) {
 }
 
 function initParams() {
-  let cm = document.getElementById("param");
+  let cm = document.getElementById("parameters");
   Object.entries(cov_pars).forEach((e, i) => {
     const field = document.createElement('input');
-    field.setAttribute('class', 'textfield');
+    field.setAttribute('class', 'form-control form-control-sm');
     field.setAttribute('type', 'number');
     field.setAttribute('id', `p${i}`);
     field.setAttribute('step', '0.1');
@@ -80,6 +90,7 @@ function initParams() {
     label.setAttribute('for', `p${i}`);
     label.innerText = e[1].desc;
     const container = document.createElement('div');
+    container.setAttribute('class', 'parameter')
     container.appendChild(field);
     container.appendChild(label);
     cm.appendChild(container);
@@ -95,8 +106,8 @@ function changeParams(id, value) {
 
 //---- Map Rendering ----------------------------------------------------------------------------------------------------------
 var svg = d3.select("svg");
-var svg_width = +svg.property("clientWidth");
-var svg_height = +svg.property("clientHeight");
+var svg_width = 300;
+var svg_height = 400;
 
 // Map and projection
 var path = d3.geoPath();

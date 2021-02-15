@@ -1,0 +1,42 @@
+.btn-header-info {
+  width: 2.5em;
+  height: 2.5em;
+  background-image: url('/static/img/fa/info-circle-solid.svg');
+  background-size: contain;
+  background-position: center center;
+  background-repeat: no-repeat;
+}
+
+.btn-header-run {
+  padding: 0 0.3em 0 0;
+
+  .icon {
+    display: inline-block;
+    vertical-align: middle;
+    background-color: #ddd;
+    width: 2.5em;
+    height: 2.5em;
+    border-radius: 50%;
+    margin-right: 0.3em;
+
+    &:after {
+      display: inline-block;
+      content: " ";
+      width: 1.5em;
+      height: 1.5em;
+      margin: 0.5em;
+      background-size: contain;
+      background-position: center center;
+      background-repeat: no-repeat;
+    }
+  }
+
+  .ic-pause:after {
+    background-image: url('/static/img/fa/pause-solid.svg');
+  }
+
+  .ic-run:after {
+    background-image: url('/static/img/fa/play-solid.svg');
+    margin-left: 0.6em;
+  }
+}
