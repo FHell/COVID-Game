@@ -6,6 +6,7 @@
   "scripts": {
     "build": "npx webpack",
     "watch": "npx webpack --watch",
+    "model": "node -r esm src/covid-game-V2.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -22,6 +23,7 @@
   "devDependencies": {
     "clean-webpack-plugin": "^3.0.0",
     "css-loader": "^5.0.2",
+    "esm": "^3.2.25",
     "file-loader": "^6.2.0",
     "html-webpack-plugin": "^5.1.0",
     "mini-css-extract-plugin": "^1.3.6",
