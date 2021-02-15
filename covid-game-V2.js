@@ -87,8 +87,8 @@ class DynParameters {
         // Disease dynamics
         this.mu = { value: 3, def: 3, desc: "Base R0: Number of people an infected infects on average." }
         this.mu_m = { value: 4, def: 4, desc: "Base R0 for Mutant: Number of people someone infected by the mutant infects on average." }
-        this.I_to_R = { value: 0.1,  def: 0.1,  desc: "Daily rate of end of infectiousness (leading to recovery or death)." }
-        this.E_to_I = { value: 0.5,  def: 0.5,  desc: "Daily rate of infection breaking out among those carrying the virus (they become infectious for others)." }
+        this.I_to_R = { value: 0.2,  def: 0.2,  desc: "Daily rate of end of infectiousness (leading to recovery or death)." }
+        this.E_to_I = { value: 0.4,  def: 0.4,  desc: "Daily rate of infection breaking out among those carrying the virus (they become infectious for others)." }
         this.k = { value: 0.1,  def: 0.1,  desc: "Overdispersion: Not everyone infects exactly R0 people, this parameter controls how much the number of infected varies from person to person." }
         this.vac_rate = { value: 0.001,  def: 0.001,  desc: "Fraction of population vaccinated per day." }
         this.vac_eff = { value: 0.8,  def: 0.8,  desc: "Fraction of infections prevented by vaccination." }
@@ -182,6 +182,53 @@ function get_deltas(E, I, I_travel, E_to_I, I_to_R, mu, k, v, background) {
     delta_E = neg_binom(size, p)
 
     return [delta_E, delta_I, delta_R]
+}
+
+// We can show how the disease model looks for an individual if everyone else is susceptible:
+
+function one_person_timeline(E_to_I, I_to_R, mu, k) {
+    let d_e = 0
+    let E = 1
+    let I = 0
+    let I_travel = 0
+    v = 0
+    background = 0
+    delta_I = 0
+    while (delta_I == 0) {
+        let deltas = get_deltas(E, I, I_travel, E_to_I, I_to_R, mu, k, v, background)
+        d_e++
+        delta_I = deltas[1]
+    }
+
+    E = 0
+    I = 1
+
+    let infect = []
+    let delta_R = 0
+    while (delta_R == 0) {
+        let deltas = get_deltas(E, I, I_travel, E_to_I, I_to_R, mu, k, v, background)
+        delta_R = deltas[2]
+        infect.push(deltas[0])
+    }
+
+    return [d_e, infect]
+}
+
+function one_person_timeline_average(dyn_pars, N) {
+    let timeline = []
+    for (let n = 0; n < N; n++) {
+        let opl = one_person_timeline(dyn_pars.E_to_I.value, dyn_pars.I_to_R.value, dyn_pars.mu.value, dyn_pars.k.value)
+        while ((opl[1].length + opl[0]) > timeline.length) {timeline.push(0)}
+        for (let m = 0; m < opl[1].length; m++) {
+            timeline[m+opl[0]] += opl[1][m]
+        }
+    }
+    let total = 0
+    for (let m = 0; m < timeline.length; m++) {
+        timeline[m] /= N
+        total += timeline[m]
+    }
+    return [total, timeline]
 }
 
 // We now come to the model of the measures
@@ -434,6 +481,10 @@ function self_test() {
     let c_meas = new Meassures()
     let country = new Country()
     let dyn_pars = new DynParameters()
+
+    console.log(one_person_timeline_average(dyn_pars, 1000))
+     
+    return
 
     for (let n = 0; n < 15; n++) {
         log_reg(Regions, dyn_pars, c_meas)
