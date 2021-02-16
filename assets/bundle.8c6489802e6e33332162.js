@@ -772,6 +772,8 @@ class TimelineChart {
           backgroundColor: '#ff5400',
           borderColor: '#d84d08',
           borderWidth: 1,
+          barPercentage: 1,
+          categoryPercentage: 1,
           datalabels: {
             color: '#fff',
             font: { size: 10 },
@@ -797,8 +799,6 @@ class TimelineChart {
               fontSize: 10,
               fontColor: '#000',
             },
-            categoryPercentage: 1.0,
-            barPercentage: 1.0,
           }],
           yAxes: [{
             gridLines: {
@@ -895,4 +895,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.8a08cd6b9993e2ac9082.js.map
+//# sourceMappingURL=bundle.8c6489802e6e33332162.js.map

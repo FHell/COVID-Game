@@ -14,6 +14,8 @@ export default class TimelineChart {
           backgroundColor: '#ff5400',
           borderColor: '#d84d08',
           borderWidth: 1,
+          barPercentage: 1,
+          categoryPercentage: 1,
           datalabels: {
             color: '#fff',
             font: { size: 10 },
@@ -39,8 +41,6 @@ export default class TimelineChart {
               fontSize: 10,
               fontColor: '#000',
             },
-            categoryPercentage: 1.0,
-            barPercentage: 1.0,
           }],
           yAxes: [{
             gridLines: {
