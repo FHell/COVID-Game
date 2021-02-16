@@ -531,7 +531,7 @@ var runButton = document.getElementById("run");
 runButton.addEventListener('click', toggleRunButton);
 updateRunButton();
 
-function updateProgress(day) {
+function updateProgressBar(day) {
   $('#gameProgressDay').html(`${day} ${day === 1 ? 'day' : 'days'}`);
   $('#gameProgress .progress-bar').css('width', `${(day / MAX_DAYS) * 100}%`);
 }
@@ -676,19 +676,6 @@ function simulate_step(state) {
   (0,_covid_game_V2__WEBPACK_IMPORTED_MODULE_0__.step_epidemic)(state.country, state.regions, state.measures, 0.01);
 }
 
-function draw_step(topo, state) {
-  if (state.step_no >= MAX_DAYS) { running = false; }
-  if (!running) { return; }
-
-  simulate_step(state);
-  draw_map(topo, state);
-  timelineChart.update();
-
-  updateProgress(state.step_no);
-  console.log("Rendered state", state);
-}
-
-
 //---- Load & Preprocess Data -------------------------------------------------------------------------------------------------
 
 var incidence = [];
@@ -729,17 +716,25 @@ function start_sim(error, topo) {
     });
   });
 
-
   gState = new State(regions);
   console.log("Initial State = ", gState);
-
   draw_map(topo, gState);
 
   console.log("done");
 
-  // TODO: find out how to trigger and stop this timer on demand, right now we just
-  //       keep up "the beat" and decide to do breaks if needed.
-  setInterval(draw_step, 1000, topo, gState);
+  const updateLoop = (topo, state) => {
+    if (state.step_no > MAX_DAYS) { running = false; }
+    if (running) {
+      simulate_step(state);
+      draw_map(topo, state);
+      timelineChart.update();
+      updateProgressBar(state.step_no);
+      console.log("Rendered state", state);
+    }
+
+    setTimeout(updateLoop, 1000, topo, gState);
+  };
+  setTimeout(updateLoop, 1000, topo, gState);
   timelineChart = new _timeline_chart__WEBPACK_IMPORTED_MODULE_2__.default($('#charts')[0], gState.country.I);
 }
 
@@ -895,4 +890,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.8c6489802e6e33332162.js.map
+//# sourceMappingURL=bundle.90354a2d09a84c0f10ad.js.map
