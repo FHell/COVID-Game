@@ -815,6 +815,7 @@ class TimelineChart {
               callback: value => value.toLocaleString(),
               maxTicksLimit: 7,
               suggestedMax: 150000,
+              suggestedMin: 0,
             },
           }],
         },
@@ -898,4 +899,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.29911333062b5b366e55.js.map
+//# sourceMappingURL=bundle.6ddb4d9b3d2a45327d4e.js.map

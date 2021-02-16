@@ -53,6 +53,7 @@ export default class TimelineChart {
               callback: value => value.toLocaleString(),
               maxTicksLimit: 7,
               suggestedMax: 150000,
+              suggestedMin: 0,
             },
           }],
         },
