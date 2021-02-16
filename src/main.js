@@ -11,12 +11,8 @@ import "./sass/default.scss";
 import TimelineChart from './timeline-chart';
 
 //---- Controls ---------------------------------------------------------------------------------------------------------------
-var slider = document.getElementById("cd");
-var output = document.getElementById("cdo");
-output.innerHTML = slider.value;
-slider.disable;
-
 var running = false;  // TODO: this should be in State
+const MAX_DAYS = 200;
 var runner = document.getElementById("run");
 const RunButtonContents = {
   PAUSED: "<i class='icon ic-run'></i> Run the simulation",
@@ -34,9 +30,9 @@ var runButton = document.getElementById("run");
 runButton.addEventListener('click', toggleRunButton);
 updateRunButton();
 
-function slider_set_value(value) {
-  output.innerHTML = value;
-  slider.value = value;
+function updateProgress(day) {
+  $('#gameProgressDay').html(`${day} ${day === 1 ? 'day' : 'days'}`);
+  $('#gameProgress .progress-bar').css('width', `${(day / MAX_DAYS) * 100}%`);
 }
 
 var gState = null;
@@ -180,14 +176,14 @@ function simulate_step(state) {
 }
 
 function draw_step(topo, state) {
-  if (state.step_no >= slider.max) { running = false; }
+  if (state.step_no >= MAX_DAYS) { running = false; }
   if (!running) { return; }
 
   simulate_step(state);
   draw_map(topo, state);
   timelineChart.update();
 
-  slider_set_value(state.step_no)
+  updateProgress(state.step_no);
   console.log("Rendered state", state);
 }
 

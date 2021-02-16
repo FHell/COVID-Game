@@ -27,7 +27,7 @@ h1, h2, h3, h4, h5, h6 {
 
 h2 {
   font-size: 1.5rem;
-  margin-bottom: 0.5em; }
+  margin-bottom: 0.75em; }
 
 .custom-switch.custom-switch-sm .custom-control-label {
   padding-left: 0.3em; }
@@ -164,5 +164,8 @@ h2 {
     background-image: url(3c7578b0bb8f6f5b7ce9.svg);
     margin-left: 0.6em; }
 
+#gameProgressDay {
+  font-size: 0.9em; }
 
-/*# sourceMappingURL=main.247a920e1948eeee6845.css.map*/
+
+/*# sourceMappingURL=main.7546b54b75aeafa66137.css.map*/
