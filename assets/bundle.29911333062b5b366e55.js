@@ -506,6 +506,8 @@ self_test();
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _covid_game_V2__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./covid-game-V2 */ "./src/covid-game-V2.js");
 /* harmony import */ var _sass_default_scss__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./sass/default.scss */ "./src/sass/default.scss");
+/* harmony import */ var _timeline_chart__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./timeline-chart */ "./src/timeline-chart.js");
+
 
 
 
@@ -654,80 +656,6 @@ function draw_map_d3(topo, fill_fn) {
     .attr("fill", fill_fn);                             // set the color of each country
 }
 
-//---- timelines_plot ---------------------------------------------------------------------------------------------------------
-var timeline_data1 = [
-  { ser1: 0.3, ser2: 4 },
-  { ser1: 2, ser2: 16 },
-  { ser1: 3, ser2: 8 }
-];
-var timeline_plot_change_duration = 1;
-// set the dimensions and margins of the graph
-var timeline_margin = { top: 10, right: 30, bottom: 30, left: 50 },
-  width = 460 - timeline_margin.left - timeline_margin.right,
-  height = 400 - timeline_margin.top - timeline_margin.bottom;
-
-// append the svg object to the body of the page
-var timeline_svg = d3.select("#timeline_plot")
-  .append("svg")
-  .attr("width", width + timeline_margin.left + timeline_margin.right)
-  .attr("height", height + timeline_margin.top + timeline_margin.bottom)
-  .append("g")
-  .attr("transform",
-    "translate(" + timeline_margin.left + "," + timeline_margin.top + ")");
-
-// Initialise a X axis:
-var timeline_x = d3.scaleLinear().range([0, width]);
-var timeline_xAxis = d3.axisBottom().scale(timeline_x);
-timeline_svg.append("g")
-  .attr("transform", "translate(0," + height + ")")
-  .attr("class", "myXaxis")
-
-// Initialize an Y axis
-var timeline_y = d3.scaleLinear().range([height, 0]);
-var timeline_yAxis = d3.axisLeft().scale(timeline_y);
-timeline_svg.append("g")
-  .attr("class", "myYaxis")
-
-// Create a function that takes a dataset as input and update the plot:
-function update_timeline(data_input) {
-  data = [];
-  for (var i = 0; i < data_input.length; i++) {
-    data.push({ day: i, value: data_input[i] });
-  }
-
-  // Create the X axis:
-  timeline_x.domain([0, d3.max(data, function (d) { return d.day })]);
-  timeline_svg.selectAll(".myXaxis").transition()
-    .duration(timeline_plot_change_duration)
-    .call(timeline_xAxis);
-
-  // create the Y axis
-  timeline_y.domain([0, d3.max(data, function (d) { return d.value })]);
-  timeline_svg.selectAll(".myYaxis")
-    .transition()
-    .duration(timeline_plot_change_duration)
-    .call(timeline_yAxis);
-
-  // Create a update selection: bind to the new data
-  var timeline_u = timeline_svg.selectAll(".lineTest")
-    .data([data], function (d) { return d.day });
-
-  // Update the line
-  timeline_u
-    .enter()
-    .append("path")
-    .attr("class", "lineTest")
-    .merge(timeline_u)
-    .transition()
-    .duration(timeline_plot_change_duration)
-    .attr("d", d3.line()
-      .x(function(d) { return timeline_x(d.day); })
-      .y(function(d) { return timeline_y(d.value); }))
-    .attr("fill", "none")
-    .attr("stroke", "steelblue")
-    .attr("stroke-width", 2.5)
-}
-
 //---- Handle Simulation State ------------------------------------------------------------------------------------------------
 
 class State {
@@ -758,7 +686,7 @@ function draw_step(topo, state) {
 
   simulate_step(state);
   draw_map(topo, state);
-  update_timeline(state.country.I);
+  timelineChart.update();
 
   slider_set_value(state.step_no)
   console.log("Rendered state", state);
@@ -784,6 +712,8 @@ d3.queue()
     incidence.push({ name: d.Landkreis, tag: d.LKNR, active: d.Anzahl, inc: d.Inzidenz })
   })
   .await(start_sim);
+
+let timelineChart = null;
 
 function start_sim(error, topo) {
   var regions = []
@@ -814,6 +744,94 @@ function start_sim(error, topo) {
   // TODO: find out how to trigger and stop this timer on demand, right now we just
   //       keep up "the beat" and decide to do breaks if needed.
   setInterval(draw_step, 1000, topo, gState);
+  timelineChart = new _timeline_chart__WEBPACK_IMPORTED_MODULE_2__.default($('#charts')[0], gState.country.I);
+}
+
+
+/***/ }),
+
+/***/ "./src/timeline-chart.js":
+/*!*******************************!*\
+  !*** ./src/timeline-chart.js ***!
+  \*******************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ TimelineChart)
+/* harmony export */ });
+class TimelineChart {
+  constructor(container, data) {
+    this.container = container;
+    this.$canvas = $('<canvas></canvas>')
+      .attr('width', 400)
+      .attr('height', 300)
+      .appendTo(container);
+    this.chart = new Chart(this.$canvas[0].getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: Array(Math.max(data.length, 28)).fill(0).map((_, i) => i + 1),
+        datasets: [{
+          data,
+          backgroundColor: '#ff5400',
+          borderColor: '#d84d08',
+          borderWidth: 1,
+          datalabels: {
+            color: '#fff',
+            font: { size: 10 },
+            anchor: 'end',
+            align: 'top',
+            clamp: true,
+          },
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        tooltips: { enabled: false },
+        hover: { mode: null },
+        scales: {
+          xAxes: [{
+            gridLines: {
+              color: '#000',
+              zeroLineColor: '#000',
+              drawOnChartArea: false,
+            },
+            ticks: {
+              fontSize: 10,
+              fontColor: '#000',
+            },
+            categoryPercentage: 1.0,
+            barPercentage: 1.0,
+          }],
+          yAxes: [{
+            gridLines: {
+              color: '#b8b8b8',
+              zeroLineColor: '#000',
+            },
+            ticks: {
+              fontSize: 10,
+              fontColor: '#000',
+              callback: value => value.toLocaleString(),
+              maxTicksLimit: 7,
+              suggestedMax: 150000,
+            },
+          }],
+        },
+        animation: {
+          duration: 300,
+        },
+        legend: { display: false },
+      }
+    });
+  }
+
+  update() {
+    for (let i = this.chart.data.labels.length; i < this.chart.data.datasets[0].data.length; i += 1) {
+      this.chart.data.labels.push(i + 1);
+    }
+    this.chart.update();
+  }
 }
 
 
@@ -880,4 +898,4 @@ function start_sim(error, topo) {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.7e2a840e863688ee5c23.js.map
+//# sourceMappingURL=bundle.29911333062b5b366e55.js.map
