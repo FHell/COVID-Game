@@ -48,7 +48,7 @@ class Region {
 
 // An important way to initialize a region is given an incidence and a total number of people
 
-function region_with_incidence(total, incidence, tag, name) {
+export function region_with_incidence(total, incidence, tag, name) {
     let I = [incidence / 100000 * total];
     let E = [I[0] * 0.7];
     let R = [0];
@@ -71,7 +71,7 @@ function region_100k_u0_9_infected() {
 
 function connect_regions_randomly(Regions) {
     let n_reg = Regions.length
-    for (reg of Regions){
+    for (let reg of Regions){
         for (let n = 0; n < n_reg; n++)
             reg.neighbours.push({dist: Math.random() * 500, index: n})
     }
@@ -172,13 +172,13 @@ function get_deltas(E, I, I_travel, E_to_I, I_to_R, mu, k, v, background) {
 
     // we need to get the paremters r and p from the mu and k which we specify / which the measures
     // affect directly.
-    d_infect = ( 1 + (1 - I_to_R) / I_to_R )
-    mu_d = mu / d_infect
-    r = 1/k
-    p = mu_d / (r + mu_d)
+    let d_infect = ( 1 + (1 - I_to_R) / I_to_R )
+    let mu_d = mu / d_infect
+    let r = 1/k
+    let p = mu_d / (r + mu_d)
 
-    I_eff = (1 - v) * (I + I_travel) + background
-    size = prob_round(r * I_eff)
+    let I_eff = (1 - v) * (I + I_travel) + background
+    let size = prob_round(r * I_eff)
     delta_E = neg_binom(size, p)
 
     return [delta_E, delta_I, delta_R]
@@ -191,9 +191,9 @@ function one_person_timeline(E_to_I, I_to_R, mu, k) {
     let E = 1
     let I = 0
     let I_travel = 0
-    v = 0
-    background = 0
-    delta_I = 0
+    let v = 0
+    let background = 0
+    let delta_I = 0
     while (delta_I == 0) {
         let deltas = get_deltas(E, I, I_travel, E_to_I, I_to_R, mu, k, v, background)
         d_e++
@@ -397,7 +397,7 @@ function R_now(reg)             { return get_current(reg.R); }
 function average(arr)               { return arr.reduce((a, v) => a + v, 0) / arr.length; }
 
 // TODO: fix the projections above so that we can use them here
-function avg7_incidence(reg) {
+export function avg7_incidence(reg) {
     let c = 0, s = 0;
     for(let i = reg.I.length-1; i>=0; i--) {
         c++;

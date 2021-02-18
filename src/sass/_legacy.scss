@@ -1,0 +1,20 @@
+.time {
+  grid-area: time;
+  font-size: small;
+}
+
+.legendspan {
+  border: 1px solid #ccc;
+  float: left;
+  width: 16px;
+  height: 16px;
+  margin-left: 2px;
+  margin-right: 2px;
+  border-radius: 4px;
+}
+
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 2px;
+}

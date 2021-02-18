@@ -1,0 +1,15 @@
+.map-container {
+  display: inline-block;
+  position: relative;
+  width: 100%;
+  padding-bottom: 133.3333%;
+  vertical-align: middle;
+  overflow: hidden;
+
+  svg {
+    display: inline-block;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+}
