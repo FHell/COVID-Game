@@ -5,7 +5,7 @@ import {
   Country,
   avg7_incidence,
   step_epidemic,
-} from './covid-game-V2';
+} from './game-engine';
 import "./sass/default.scss";
 import TimelineChart from './timeline-chart';
 

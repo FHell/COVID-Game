@@ -14,10 +14,10 @@ __webpack_require__.r(__webpack_exports__);
 
 /***/ }),
 
-/***/ "./src/covid-game-V2.js":
-/*!******************************!*\
-  !*** ./src/covid-game-V2.js ***!
-  \******************************/
+/***/ "./src/game-engine.js":
+/*!****************************!*\
+  !*** ./src/game-engine.js ***!
+  \****************************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 __webpack_require__.r(__webpack_exports__);
@@ -37,7 +37,7 @@ __webpack_require__.r(__webpack_exports__);
 
 class Country {
     constructor() {
-        
+
         // Here we can also save summary information that we want to show
         // like highscore data, number of people who died, number of
         // person-days in lockdown, etc...
@@ -48,16 +48,16 @@ class Country {
         this.Em = []
         this.Im = []
         this.R = []
-        
+
         this.ratio_vac = 0
         this.deaths = []
     }
 }
 
 class Region {
-    
+
     constructor(N_S, N_E, N_I, N_Em, N_Im, N_R, N_total, tag, name) {
-        
+
         // These should be arrays        
         this.S = N_S
         this.E = N_E
@@ -102,9 +102,9 @@ function region_100k_u0_9_infected() {
 
 function connect_regions_randomly(Regions) {
     let n_reg = Regions.length
-    for (let reg of Regions){
+    for (let reg of Regions) {
         for (let n = 0; n < n_reg; n++)
-            reg.neighbours.push({dist: Math.random() * 500, index: n})
+            reg.neighbours.push({ dist: Math.random() * 500, index: n })
     }
 }
 
@@ -118,21 +118,21 @@ class DynParameters {
         // Disease dynamics
         this.mu = { value: 3, def: 3, desc: "Base R0: Number of people an infected infects on average." }
         this.mu_m = { value: 4, def: 4, desc: "Base R0 for Mutant: Number of people someone infected by the mutant infects on average." }
-        this.I_to_R = { value: 0.2,  def: 0.2,  desc: "Daily rate of end of infectiousness (leading to recovery or death)." }
-        this.E_to_I = { value: 0.4,  def: 0.4,  desc: "Daily rate of infection breaking out among those carrying the virus (they become infectious for others)." }
-        this.k = { value: 0.1,  def: 0.1,  desc: "Overdispersion: Not everyone infects exactly R0 people, this parameter controls how much the number of infected varies from person to person." }
-        this.vac_rate = { value: 0.001,  def: 0.001,  desc: "Fraction of population vaccinated per day." }
-        this.vac_eff = { value: 0.8,  def: 0.8,  desc: "Fraction of infections prevented by vaccination." }
-        this.tti_capacity = { value: 0.0001,  def: 0.0001,  desc: "Trace capacity as fraction of total local population." }
-        this.bck_rate = { value: 0.5,  def: 0.5,  desc: "Average number of infected coming into each region per day from outside the country." }
-        this.bck_rate_m = { value: 0.5,  def: 0.5,  desc: "Average number of mutant infected coming into each region per day from outside the country." }
-        
+        this.I_to_R = { value: 0.2, def: 0.2, desc: "Daily rate of end of infectiousness (leading to recovery or death)." }
+        this.E_to_I = { value: 0.4, def: 0.4, desc: "Daily rate of infection breaking out among those carrying the virus (they become infectious for others)." }
+        this.k = { value: 0.1, def: 0.1, desc: "Overdispersion: Not everyone infects exactly R0 people, this parameter controls how much the number of infected varies from person to person." }
+        this.vac_rate = { value: 0.001, def: 0.001, desc: "Fraction of population vaccinated per day." }
+        this.vac_eff = { value: 0.8, def: 0.8, desc: "Fraction of infections prevented by vaccination." }
+        this.tti_capacity = { value: 0.0001, def: 0.0001, desc: "Trace capacity as fraction of total local population." }
+        this.bck_rate = { value: 0.5, def: 0.5, desc: "Average number of infected coming into each region per day from outside the country." }
+        this.bck_rate_m = { value: 0.5, def: 0.5, desc: "Average number of mutant infected coming into each region per day from outside the country." }
+
         // Death model
-        this.hospital_capacity = { value: 0.001,  def: 0.001,  desc: "ICU capacity as a fraction of population." }
-        this.death_rate_1 = { value: 0.01,  def: 0.01,  desc: "Fraction of deaths for people within hospital capactity." }
-        this.death_rate_2 = { value: 0.05,  def: 0.05,  desc: "Fraction of deaths for people beyond hospital capactity." }
-        this.vulnerable = { value: 0.2,  def: 0.2,  desc: "Fraction of vulnerable in the population." }
-        this.non_vul_dr = { value: 0.1,  def: 0.1,  desc: "Rate of serious complications/deaths among non-vulnerable population relative to overall population (this modifier gradually kicks in as the vulnerable get vaccinated)."}
+        this.hospital_capacity = { value: 0.001, def: 0.001, desc: "ICU capacity as a fraction of population." }
+        this.death_rate_1 = { value: 0.01, def: 0.01, desc: "Fraction of deaths for people within hospital capactity." }
+        this.death_rate_2 = { value: 0.05, def: 0.05, desc: "Fraction of deaths for people beyond hospital capactity." }
+        this.vulnerable = { value: 0.2, def: 0.2, desc: "Fraction of vulnerable in the population." }
+        this.non_vul_dr = { value: 0.1, def: 0.1, desc: "Rate of serious complications/deaths among non-vulnerable population relative to overall population (this modifier gradually kicks in as the vulnerable get vaccinated)." }
     }
 }
 
@@ -150,16 +150,16 @@ function deaths(dyn_pars, I, v_rate, delta_R, N_total) {
     }
 
     // We assume that once the vulnerable are infected mortality will be much lower
-    if (v_rate > dyn_pars.vulnerable.value) {dr = base_dr * dyn_pars.non_vul_dr.value}
-    else {dr = ((1 - v_rate) + v_rate * dyn_pars.non_vul_dr.value) * base_dr}
+    if (v_rate > dyn_pars.vulnerable.value) { dr = base_dr * dyn_pars.non_vul_dr.value }
+    else { dr = ((1 - v_rate) + v_rate * dyn_pars.non_vul_dr.value) * base_dr }
 
     return prob_round(dr * delta_R)
 }
 
 class DerivedProps {
     constructor(dyn_pars) {
-        this.time_to_infectious = { value: 1 + (1 - dyn_pars.E_to_I.value) / dyn_pars.E_to_I.value, desc: "Average time until an infected person becomes infectious."}
-        this.time_of_infectiousness = { value: 1 + (1 - dyn_pars.I_to_R.value) / dyn_pars.I_to_R.value, desc: "Average time a person is infectious."}
+        this.time_to_infectious = { value: 1 + (1 - dyn_pars.E_to_I.value) / dyn_pars.E_to_I.value, desc: "Average time until an infected person becomes infectious." }
+        this.time_of_infectiousness = { value: 1 + (1 - dyn_pars.I_to_R.value) / dyn_pars.I_to_R.value, desc: "Average time a person is infectious." }
         // this.superspreader_20 = {value: ..., desc: "20% of people infect this fraction of the total amount of infected."}
     }
 }
@@ -168,20 +168,20 @@ class DerivedProps {
 // The core dynamic of the SEIR model is given next in terms of binomial and negative binomial distributions
 // Our negative binomial diefinition follows that of Wikipedia.
 
-function binom(N, p){
+function binom(N, p) {
     let suc = 0
     for (let n = 0; n < N; n++) {
-        if (Math.random() < p) {suc++}
+        if (Math.random() < p) { suc++ }
     }
     return suc
 }
 
-function neg_binom(r, p){
-    if (p == 0.) {console.log("Negative binomial was called with p = 0"); return 0} // Convenient failure mode
+function neg_binom(r, p) {
+    if (p == 0.) { console.log("Negative binomial was called with p = 0"); return 0 } // Convenient failure mode
     let suc = 0;
     let fai = 0;
     while (fai < r) {
-        if (Math.random() < p) {suc++} else {fai++}
+        if (Math.random() < p) { suc++ } else { fai++ }
     }
     return suc
 }
@@ -191,7 +191,7 @@ function prob_round(x) {
     // and to the integer above otherwise. In terms of linear expectation values
     // this is a smooth rounding function. :)
     let i = Math.floor(x)
-    if (Math.random() < (x - i)) {return i + 1} else {return i}
+    if (Math.random() < (x - i)) { return i + 1 } else { return i }
 }
 
 function get_deltas(E, I, I_travel, E_to_I, I_to_R, mu, k, v, background) {
@@ -205,9 +205,9 @@ function get_deltas(E, I, I_travel, E_to_I, I_to_R, mu, k, v, background) {
 
     // we need to get the paremters r and p from the mu and k which we specify / which the measures
     // affect directly.
-    let d_infect = ( 1 + (1 - I_to_R) / I_to_R )
+    let d_infect = (1 + (1 - I_to_R) / I_to_R)
     let mu_d = mu / d_infect
-    let r = 1/k
+    let r = 1 / k
     let p = mu_d / (r + mu_d)
 
     let I_eff = (1 - v) * (I + I_travel) + background
@@ -253,19 +253,19 @@ function one_person_timeline_average(dyn_pars, N) {
     let total = 0
     for (let n = 0; n < N; n++) {
         let opl = one_person_timeline(dyn_pars.E_to_I.value, dyn_pars.I_to_R.value, dyn_pars.mu.value, dyn_pars.k.value)
-        while ((opl[1].length + opl[0]) > timeline.length) {timeline.push(0)}
+        while ((opl[1].length + opl[0]) > timeline.length) { timeline.push(0) }
         total = 0
 
         for (let m = 0; m < opl[1].length; m++) {
-            timeline[m+opl[0]] += opl[1][m]
+            timeline[m + opl[0]] += opl[1][m]
             total += opl[1][m]
         }
-        
-        while (total > totals.length - 1) {totals.push(0)}
+
+        while (total > totals.length - 1) { totals.push(0) }
 
         totals[total] += 1
     }
-    
+
     for (let m = 0; m < timeline.length; m++) {
         timeline[m] /= N
     }
@@ -282,14 +282,14 @@ function one_person_timeline_average(dyn_pars, N) {
 class Measures {
     constructor() {
 
-        this.gatherings_1000        = { value: 1 - 0.2, active: false, desc: "No gatherings with more than 1000 people" }
-        this.gatherings_100         = { value: 1 - 0.25, active: false, desc: "No gatherings with more than 100 people" }
-        this.gatherings_10          = { value: 1 - 0.35, active: false, desc: "No gatherings with more than 10 people" }
-        this.schools_unis_closed    = { value: 1 - 0.4, active: false, desc: "Schools and Universities are closed" }
-        this.some_business_closed   = { value: 1 - 0.2, active: false, desc: "Selected (high-traffic) buisnesses are closed" }
-        this.all_business_closed    = { value: 1 - 0.3, active: false, desc: "All non-essential buisnesses are closed" }
-        this.test_trace_isolate     = { value: 1 - 0.33, active: false, desc: "Trace & isolate infected persons" }
-        this.stay_at_home           = { value: 1 - 0.1, active: false, desc: "Strict 'stay at home' orders" }
+        this.gatherings_1000 = { value: 1 - 0.2, active: false, desc: "No gatherings with more than 1000 people" }
+        this.gatherings_100 = { value: 1 - 0.25, active: false, desc: "No gatherings with more than 100 people" }
+        this.gatherings_10 = { value: 1 - 0.35, active: false, desc: "No gatherings with more than 10 people" }
+        this.schools_unis_closed = { value: 1 - 0.4, active: false, desc: "Schools and Universities are closed" }
+        this.some_business_closed = { value: 1 - 0.2, active: false, desc: "Selected (high-traffic) buisnesses are closed" }
+        this.all_business_closed = { value: 1 - 0.3, active: false, desc: "All non-essential buisnesses are closed" }
+        this.test_trace_isolate = { value: 1 - 0.33, active: false, desc: "Trace & isolate infected persons" }
+        this.stay_at_home = { value: 1 - 0.1, active: false, desc: "Strict 'stay at home' orders" }
     }
 
     toggle(key) {
@@ -300,7 +300,7 @@ class Measures {
 function measure_effect(cm) {
     // This is how I interpret the slide. Might or might not be true:
     let mu_mult = 1.
-    Object.keys(cm).filter(m => cm[m].active && m != "test_trace_isolate").map(m => {mu_mult *= cm[m].value})
+    Object.keys(cm).filter(m => cm[m].active && m != "test_trace_isolate").map(m => { mu_mult *= cm[m].value })
     return mu_mult
 }
 
@@ -308,8 +308,8 @@ function tti_eff(infected, trace_capacity, cm) {
     // rough model is Just dreamed up of test, trace, isolate efficiency,
     // if we can trace everyone we reduce R by 1/3rd
     // if not we reduce it by 1/3rd for the fraction traced and not at all for the rest.
-    if (infected < trace_capacity) {return cm.test_trace_isolate.value}
-    else {return (cm.test_trace_isolate.value * trace_capacity / infected + (infected - trace_capacity) / infected)}
+    if (infected < trace_capacity) { return cm.test_trace_isolate.value }
+    else { return (cm.test_trace_isolate.value * trace_capacity / infected + (infected - trace_capacity) / infected) }
 }
 
 
@@ -321,14 +321,14 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
 
     let s_adjust = reg.S[now] / reg.total
 
-    if (reg.S[now] < 0) {console.log("Something went wrong, S went negative")}
+    if (reg.S[now] < 0) { console.log("Something went wrong, S went negative") }
 
-    let local_mu  = s_adjust * mu_mult * dyn_pars.mu.value
-    let local_mu_m  = s_adjust * mu_mult * dyn_pars.mu_m.value
+    let local_mu = s_adjust * mu_mult * dyn_pars.mu.value
+    let local_mu_m = s_adjust * mu_mult * dyn_pars.mu_m.value
 
     if (cm.test_trace_isolate.active) {
         const te = tti_eff(reg.I[now] + reg.Im[now], dyn_pars.tti_capacity.value * reg.total, cm)
-        local_mu  *= te
+        local_mu *= te
         local_mu_m *= te
     }
 
@@ -349,7 +349,7 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
     // Handle the case when the last susceptible in a region become exposed:
     let c1 = reg.S[now] - delta_E - delta_Em
 
-    if (c1 > 0){
+    if (c1 > 0) {
         reg.S.push(reg.S[now] - delta_E - delta_Em)
     }
     else {
@@ -378,13 +378,13 @@ function step_epidemic(country, regions, cm, dyn_pars, travel) {
     // travel is the fraction of people from a region that travel to a neighbouring region
     // in our first approximation these are simply all regions within 100km and travel is a constant fraction.
     // these people cause infections at the place they travel to as well as at home.
-        
+
     for (let reg of regions) {
         let now = reg.S.length - 1;
 
         reg.travel_I = 0
         reg.travel_Im = 0
-        for (let nei of reg.neighbours){
+        for (let nei of reg.neighbours) {
             if (nei.dist < 100 && reg != regions[nei.index]) {
                 reg.travel_I += Math.round(travel * regions[nei.index].I[now])
                 reg.travel_Im += Math.round(travel * regions[nei.index].Im[now])
@@ -416,59 +416,59 @@ function step_epidemic(country, regions, cm, dyn_pars, travel) {
     // let local_r  = s_adjust * mu_mult * dyn_pars.mu.value
     // console.log(tti_eff(re.I[now] + re.Im[now], dyn_pars.tti_capacity.value * reg.total, cm), mu_mult, local_r)
     // console.log(cm.gatherings_1000.active)
- 
+
 }
 
-function get_current(field)         { return field[field.length - 1]; } 
-function count(proj, r)             { return r.reduce((a, v) => a + proj(v), 0); }
+function get_current(field) { return field[field.length - 1]; }
+function count(proj, r) { return r.reduce((a, v) => a + proj(v), 0); }
 
-function exposed(reg)               { return get_current(reg.E) + get_current(reg.Em); }
-function infectious(reg)            { return get_current(reg.I) + get_current(reg.Im); }
-function infected(reg)              { return exposed(reg) + infectious(reg); }
-function recovered(reg)             { return get_current(reg.R); }
-function susceptible(reg)           { return get_current(reg.S); }
-function total(reg)                 { return reg.total; }
+function exposed(reg) { return get_current(reg.E) + get_current(reg.Em); }
+function infectious(reg) { return get_current(reg.I) + get_current(reg.Im); }
+function infected(reg) { return exposed(reg) + infectious(reg); }
+function recovered(reg) { return get_current(reg.R); }
+function susceptible(reg) { return get_current(reg.S); }
+function total(reg) { return reg.total; }
 
-function count_infectious(Regions)  { return count(infectious, Regions); }
-function count_exposed(Regions)     { return count(exposed, Regions); }
-function count_recovered(Regions)   { return count(recovered, Regions); }
+function count_infectious(Regions) { return count(infectious, Regions); }
+function count_exposed(Regions) { return count(exposed, Regions); }
+function count_recovered(Regions) { return count(recovered, Regions); }
 function count_susceptible(Regions) { return count(susceptible, Regions); }
 
-function S_now(reg)               { return get_current(reg.S); }
-function E_now(reg)            { return get_current(reg.E); }
-function I_now(reg)              { return get_current(reg.I); }
-function Em_now(reg)            { return get_current(reg.Em); }
-function Im_now(reg)              { return get_current(reg.Im); }
-function R_now(reg)             { return get_current(reg.R); }
+function S_now(reg) { return get_current(reg.S); }
+function E_now(reg) { return get_current(reg.E); }
+function I_now(reg) { return get_current(reg.I); }
+function Em_now(reg) { return get_current(reg.Em); }
+function Im_now(reg) { return get_current(reg.Im); }
+function R_now(reg) { return get_current(reg.R); }
 
 
 
 //
-function average(arr)               { return arr.reduce((a, v) => a + v, 0) / arr.length; }
+function average(arr) { return arr.reduce((a, v) => a + v, 0) / arr.length; }
 
 // TODO: fix the projections above so that we can use them here
 function avg7_incidence(reg) {
     let c = 0, s = 0;
-    for(let i = reg.I.length-1; i>=0; i--) {
+    for (let i = reg.I.length - 1; i >= 0; i--) {
         c++;
         s += ((reg.I[i] + reg.Im[i] + reg.E[i] + reg.Em[i]) / reg.total) * 100000;
 
-        if (c>7) { break; }
+        if (c > 7) { break; }
     }
     return (s / c) || 0;
 }
 
 //tti = Test Trace Isolate
 
-function tti_over_capacity(Regions, dyn_pars){
+function tti_over_capacity(Regions, dyn_pars) {
     let tti = 0
     for (let reg of Regions) {
-        if (reg.I[reg.I.length - 1] + reg.Im[reg.Im.length - 1] > dyn_pars.tti_capacity.value * reg.total) {tti += 1}
+        if (reg.I[reg.I.length - 1] + reg.Im[reg.Im.length - 1] > dyn_pars.tti_capacity.value * reg.total) { tti += 1 }
     }
     return tti
 }
 
-function tti_global_effectiveness(Regions, dyn_pars, cm){
+function tti_global_effectiveness(Regions, dyn_pars, cm) {
     let tti_prevented = 0
     let n = Regions.length
     for (let reg of Regions) {
@@ -480,7 +480,7 @@ function tti_global_effectiveness(Regions, dyn_pars, cm){
 }
 
 // First naive implementation, use projections once they can look into the past?
-function get_timelines(Country){
+function get_timelines(Country) {
     // ToDo: check that length Regions > 0
     let S = Country.S
     let E = Country.E
@@ -488,7 +488,7 @@ function get_timelines(Country){
     let Im = Country.Im
     let Em = Country.Em
     let R = Country.R
-    return {S: S, E: E, I: I, Im: Im, Em: Em, R: R}
+    return { S: S, E: E, I: I, Im: Im, Em: Em, R: R }
 }
 
 // Things that we really want to show in the front end:
@@ -518,10 +518,10 @@ function init_random_regions() {
     return Regions
 }
 
-function log_reg(Regions, dyn_pars, cm){
+function log_reg(Regions, dyn_pars, cm) {
     console.log([tti_global_effectiveness(Regions, dyn_pars, cm), count_susceptible(Regions), count_exposed(Regions), count_infectious(Regions), count_recovered(Regions)])
 }
-function log_country(country){
+function log_country(country) {
     console.log([S_now(country), E_now(country), I_now(country), R_now(country)])
 }
 
@@ -533,7 +533,7 @@ function self_test() {
     let dyn_pars = new DynParameters()
 
     console.log(one_person_timeline_average(dyn_pars, 1000))
-     
+
     return
 
     for (let n = 0; n < 15; n++) {
@@ -584,7 +584,7 @@ self_test();
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _covid_game_V2__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./covid-game-V2 */ "./src/covid-game-V2.js");
+/* harmony import */ var _game_engine__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./game-engine */ "./src/game-engine.js");
 /* harmony import */ var _sass_default_scss__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./sass/default.scss */ "./src/sass/default.scss");
 /* harmony import */ var _timeline_chart__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./timeline-chart */ "./src/timeline-chart.js");
 
@@ -619,10 +619,10 @@ function updateProgressBar(day) {
 class State {
   constructor() {
     this.regions = [];
-    this.measures = new _covid_game_V2__WEBPACK_IMPORTED_MODULE_0__.Measures();
-    this.covid_pars = new _covid_game_V2__WEBPACK_IMPORTED_MODULE_0__.DynParameters();
+    this.measures = new _game_engine__WEBPACK_IMPORTED_MODULE_0__.Measures();
+    this.covid_pars = new _game_engine__WEBPACK_IMPORTED_MODULE_0__.DynParameters();
     this.step_no = 0;
-    this.country = new _covid_game_V2__WEBPACK_IMPORTED_MODULE_0__.Country();
+    this.country = new _game_engine__WEBPACK_IMPORTED_MODULE_0__.Country();
   }
 }
 
@@ -749,13 +749,13 @@ function draw_map(topo, state) {
   draw_map_d3(topo, function (f) {
     let ctag = f.properties.AGS;
     let cr = state.regions.find(e => e.tag == ctag);
-    return colorScale((0,_covid_game_V2__WEBPACK_IMPORTED_MODULE_0__.avg7_incidence)(cr));
+    return colorScale((0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.avg7_incidence)(cr));
   });
 }
 
 function simulate_step(state) {
   state.step_no++;
-  (0,_covid_game_V2__WEBPACK_IMPORTED_MODULE_0__.step_epidemic)(state.country, state.regions, state.measures, state.covid_pars, 0.01);
+  (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.step_epidemic)(state.country, state.regions, state.measures, state.covid_pars, 0.01);
 }
 
 //---- Load & Preprocess Data -------------------------------------------------------------------------------------------------
@@ -784,7 +784,7 @@ function start_sim(error, topo) {
   var regions = []
   topo.features.forEach(e => {
     let inc = findIncidence(e.properties.AGS, 115); // TODO: default incidence hardcoded to 115, should be average from CSV dataset
-    let r = (0,_covid_game_V2__WEBPACK_IMPORTED_MODULE_0__.region_with_incidence)(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN)
+    let r = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.region_with_incidence)(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN)
     // for distance between regions
     // two passes to prevent expensive recalculation
     r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
@@ -972,4 +972,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.3d79405a2f087f7c1b84.js.map
+//# sourceMappingURL=bundle.e8ec9148f22698cb1883.js.map
