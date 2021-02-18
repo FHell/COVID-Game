@@ -4,7 +4,7 @@
 // These contain the timelines for various quantities, as well as some
 // basic information attached to either.
 
-class Country {
+export class Country {
     constructor() {
         
         // Here we can also save summary information that we want to show
@@ -80,7 +80,7 @@ function connect_regions_randomly(Regions) {
 
 // We then have the parameters for the disease and death model, as well as some properties derived from the parameters.
 
-class DynParameters {
+export class DynParameters {
     constructor() {
         // The parameters of the disease and the vaccination campaign
 
@@ -109,7 +109,9 @@ function deaths(dyn_pars, I, v_rate, delta_R, N_total) {
     // death model
     // We assume vaccination prevents hospitalization
     // Then take the ratio of hospital capacity to the number of unvaccinated infected.
-    hos = N_total * dyn_pars.hospital_capacity.value / ((1 - v_rate) * I)
+    let hos = N_total * dyn_pars.hospital_capacity.value / ((1 - v_rate) * I)
+    let base_dr
+    let dr
     if (hos > 1) {
         base_dr = dyn_pars.death_rate_1.value
     } else {
@@ -215,25 +217,38 @@ function one_person_timeline(E_to_I, I_to_R, mu, k) {
 }
 
 function one_person_timeline_average(dyn_pars, N) {
-    let timeline = []
+    let timeline = [0]
+    let totals = [0]
+    let total = 0
     for (let n = 0; n < N; n++) {
         let opl = one_person_timeline(dyn_pars.E_to_I.value, dyn_pars.I_to_R.value, dyn_pars.mu.value, dyn_pars.k.value)
         while ((opl[1].length + opl[0]) > timeline.length) {timeline.push(0)}
+        total = 0
+
         for (let m = 0; m < opl[1].length; m++) {
             timeline[m+opl[0]] += opl[1][m]
+            total += opl[1][m]
         }
+        
+        while (total > totals.length - 1) {totals.push(0)}
+
+        totals[total] += 1
     }
-    let total = 0
+    
     for (let m = 0; m < timeline.length; m++) {
         timeline[m] /= N
-        total += timeline[m]
     }
-    return [total, timeline]
+
+    // for (let m = 0; m < totals.length; m++) {
+    //     totals[m] /= N
+    // }
+
+    return [totals, timeline]
 }
 
 // We now come to the model of the measures
 
-class Meassures {
+export class Measures {
     constructor() {
 
         this.gatherings_1000        = { value: 1 - 0.2, active: false, desc: "No gatherings with more than 1000 people" }
@@ -244,7 +259,11 @@ class Meassures {
         this.all_business_closed    = { value: 1 - 0.3, active: false, desc: "All non-essential buisnesses are closed" }
         this.test_trace_isolate     = { value: 1 - 0.33, active: false, desc: "Trace & isolate infected persons" }
         this.stay_at_home           = { value: 1 - 0.1, active: false, desc: "Strict 'stay at home' orders" }
-        }
+    }
+
+    toggle(key) {
+        this[key].active = !this[key].active;
+    }
 }
 
 function measure_effect(cm) {
@@ -277,12 +296,12 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
     let local_mu_m  = s_adjust * mu_mult * dyn_pars.mu_m.value
 
     if (cm.test_trace_isolate.active) {
-        te = tti_eff(reg.I[now] + reg.Im[now], dyn_pars.tti_capacity.value * reg.total, cm)
+        const te = tti_eff(reg.I[now] + reg.Im[now], dyn_pars.tti_capacity.value * reg.total, cm)
         local_mu  *= te
         local_mu_m *= te
     }
 
-    v_eff = country.ratio_vac * dyn_pars.vac_eff.value
+    let v_eff = country.ratio_vac * dyn_pars.vac_eff.value
 
     let deltas = get_deltas(reg.E[now], reg.I[now], reg.travel_I, dyn_pars.E_to_I.value, dyn_pars.I_to_R.value, local_mu, dyn_pars.k.value, v_eff, dyn_pars.bck_rate.value)
 
@@ -319,7 +338,7 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
 }
 
 
-function step_epidemic(country, regions, cm, dyn_pars, travel) {
+export function step_epidemic(country, regions, cm, dyn_pars, travel) {
 
     country.ratio_vac += dyn_pars.vac_rate.value // Vaccinate some people
 
@@ -329,12 +348,12 @@ function step_epidemic(country, regions, cm, dyn_pars, travel) {
     // in our first approximation these are simply all regions within 100km and travel is a constant fraction.
     // these people cause infections at the place they travel to as well as at home.
         
-    for (reg of regions) {
+    for (let reg of regions) {
         let now = reg.S.length - 1;
 
         reg.travel_I = 0
         reg.travel_Im = 0
-        for (nei of reg.neighbours){
+        for (let nei of reg.neighbours){
             if (nei.dist < 100 && reg != regions[nei.index]) {
                 reg.travel_I += Math.round(travel * regions[nei.index].I[now])
                 reg.travel_Im += Math.round(travel * regions[nei.index].Im[now])
@@ -345,7 +364,7 @@ function step_epidemic(country, regions, cm, dyn_pars, travel) {
     let mu_mult = measure_effect(cm)
     let d = 0
 
-    for (reg of regions) {
+    for (let reg of regions) {
         d += local_step(reg, country, dyn_pars, cm, mu_mult)
     }
 
@@ -412,7 +431,7 @@ export function avg7_incidence(reg) {
 
 function tti_over_capacity(Regions, dyn_pars){
     let tti = 0
-    for (reg of Regions) {
+    for (let reg of Regions) {
         if (reg.I[reg.I.length - 1] + reg.Im[reg.Im.length - 1] > dyn_pars.tti_capacity.value * reg.total) {tti += 1}
     }
     return tti
@@ -421,7 +440,7 @@ function tti_over_capacity(Regions, dyn_pars){
 function tti_global_effectiveness(Regions, dyn_pars, cm){
     let tti_prevented = 0
     let n = Regions.length
-    for (reg of Regions) {
+    for (let reg of Regions) {
         let tti = tti_eff(infected(reg), dyn_pars.tti_capacity.value * reg.total, cm)
         let tti_max = tti_eff(0, dyn_pars.tti_capacity.value * reg.total, cm)
         tti_prevented += (1 - tti) / (1 - tti_max)
@@ -478,7 +497,7 @@ function log_country(country){
 function self_test() {
 
     let Regions = init_random_regions()
-    let c_meas = new Meassures()
+    let c_meas = new Measures()
     let country = new Country()
     let dyn_pars = new DynParameters()
 
