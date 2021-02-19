@@ -1,12 +1,11 @@
 import {
-  possible_measures,
-  cov_pars,
+  Measures,
+  DynParameters,
   region_with_incidence,
-  Measure_State,
   Country,
   avg7_incidence,
   step_epidemic,
-} from './covid-game-V2';
+} from './game-engine';
 import "./sass/default.scss";
 import TimelineChart from './timeline-chart';
 
@@ -35,7 +34,17 @@ function updateProgressBar(day) {
   $('#gameProgress .progress-bar').css('width', `${(day / MAX_DAYS) * 100}%`);
 }
 
-var gState = null;
+class State {
+  constructor() {
+    this.regions = [];
+    this.measures = new Measures();
+    this.covid_pars = new DynParameters();
+    this.step_no = 0;
+    this.country = new Country();
+  }
+}
+
+var gState = new State();
 
 function createElementFromHTML(html) {
   let div = document.createElement('div');
@@ -45,7 +54,7 @@ function createElementFromHTML(html) {
 
 function initMeasures() {
   let cm = document.getElementById("countermeasures");
-  Object.entries(possible_measures).forEach((e, i) => {
+  Object.entries(gState.measures).forEach((e, i) => {
     const toggle = document.createElement('input');
     toggle.setAttribute('type', 'checkbox');
     toggle.setAttribute('id', `m${i}`);
@@ -73,14 +82,14 @@ function toggleMeasure(cb) {
 
 function initParams() {
   let cm = document.getElementById("parameters");
-  Object.entries(cov_pars).forEach((e, i) => {
+  Object.entries(gState.covid_pars).forEach((e, i) => {
     const field = document.createElement('input');
     field.setAttribute('class', 'form-control form-control-sm');
     field.setAttribute('type', 'number');
     field.setAttribute('id', `p${i}`);
     field.setAttribute('step', '0.1');
     field.setAttribute('min', '0');
-    field.setAttribute('max', '1');
+    field.setAttribute('max', e[1].def * 2);
     field.addEventListener('change', () => { changeParams(e[0], field.value); });
     field.setAttribute('value', e[1].value);
     const label = document.createElement('label');
@@ -97,8 +106,8 @@ initParams();
 
 function changeParams(id, value) {
   if (gState == null) { return; }
-  cov_pars[id].value = parseFloat(value) || cov_pars[id].def;
-  console.log(cov_pars);
+  gState.covid_pars[id].value = parseFloat(value) || gState.covid_pars[id].def;
+  console.log(gState.covid_pars);
 }
 
 //---- Map Rendering ----------------------------------------------------------------------------------------------------------
@@ -153,14 +162,6 @@ function draw_map_d3(topo, fill_fn) {
 
 //---- Handle Simulation State ------------------------------------------------------------------------------------------------
 
-class State {
-  constructor(regions, measures = new Measure_State()) {
-    this.regions = regions;
-    this.measures = measures;
-    this.step_no = 0;
-    this.country = new Country()
-  }
-}
 
 function draw_map(topo, state) {
   draw_map_d3(topo, function (f) {
@@ -172,7 +173,7 @@ function draw_map(topo, state) {
 
 function simulate_step(state) {
   state.step_no++;
-  step_epidemic(state.country, state.regions, state.measures, 0.01);
+  step_epidemic(state.country, state.regions, state.measures, state.covid_pars, 0.01);
 }
 
 //---- Load & Preprocess Data -------------------------------------------------------------------------------------------------
@@ -215,7 +216,7 @@ function start_sim(error, topo) {
     });
   });
 
-  gState = new State(regions);
+  gState.regions = regions;
   console.log("Initial State = ", gState);
   draw_map(topo, gState);
 

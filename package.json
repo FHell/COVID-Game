@@ -6,7 +6,7 @@
   "scripts": {
     "build": "npx webpack",
     "watch": "npx webpack --watch",
-    "model": "node -r esm src/covid-game-V2.js",
+    "model": "node -r esm src/game-engine.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
