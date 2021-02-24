@@ -20,6 +20,12 @@ export class Country {
 
         this.ratio_vac = 0
         this.deaths = []
+
+        this.cumulative_infections = [] // Plot this
+        this.cumulative_infections_mutation_only = [] // Plot this
+        this.cumulative_deaths = [] // Plot this
+        this.seven_d_incidence = [] // Plot this
+        this.global_tti = 0. // Give a gauge showing this.
     }
 }
 
@@ -43,6 +49,10 @@ class Region {
         this.tag = tag
         this.name = name
         this.neighbours = Array() // Needs to be populated later
+
+        this.seven_d_incidence = [] // Map this
+        this.seven_d_incidence_velocity = [] // Map this
+        this.local_tti = 0. // Map this
     }
 }
 
@@ -329,7 +339,10 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
         const te = tti_eff(reg.I[now] + reg.Im[now], dyn_pars.tti_capacity.value * reg.total, cm)
         local_mu *= te
         local_mu_m *= te
+        reg.local_tti = te
     }
+
+
 
     let v_eff = country.ratio_vac * dyn_pars.vac_eff.value
 
@@ -372,7 +385,7 @@ export function step_epidemic(country, regions, cm, dyn_pars, travel) {
 
     country.ratio_vac += dyn_pars.vac_rate.value // Vaccinate some people
 
-    console.log(country.ratio_vac)
+    // console.log(country.ratio_vac)
 
     // travel is the fraction of people from a region that travel to a neighbouring region
     // in our first approximation these are simply all regions within 100km and travel is a constant fraction.
@@ -405,6 +418,11 @@ export function step_epidemic(country, regions, cm, dyn_pars, travel) {
     country.Im.push(count(Im_now, regions))
     country.R.push(count(R_now, regions))
     country.deaths.push(d)
+
+    country.cumulative_infections.push(S_now(country))
+
+
+    country.global_tti = tti_global_effectiveness(regions, dyn_pars, cm)
     // debug output
     // let re = regions[2]
 
@@ -533,9 +551,9 @@ function self_test() {
 
     console.log(one_person_timeline_average(dyn_pars, 1000))
 
-    return
+    // return
 
-    for (let n = 0; n < 15; n++) {
+    for (let n = 0; n < 150; n++) {
         log_reg(Regions, dyn_pars, c_meas)
 
         step_epidemic(country, Regions, c_meas, dyn_pars, 0.01)
