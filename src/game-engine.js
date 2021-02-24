@@ -309,7 +309,7 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
     let delta_I = deltas[1] // newly infectious
     let delta_R = deltas[2] // newly removed
 
-    let deltas_m = get_deltas(reg.E[now], reg.Im[now], reg.travel_Im, dyn_pars.E_to_I.value, dyn_pars.I_to_R.value, local_mu_m, dyn_pars.k.value, v_eff, dyn_pars.bck_rate_m.value)
+    let deltas_m = get_deltas(reg.Em[now], reg.Im[now], reg.travel_Im, dyn_pars.E_to_I.value, dyn_pars.I_to_R.value, local_mu_m, dyn_pars.k.value, v_eff, dyn_pars.bck_rate_m.value)
 
     let delta_Em = deltas_m[0] // newly exposed mutant
     let delta_Im = deltas_m[1] // newly infectious mutant
