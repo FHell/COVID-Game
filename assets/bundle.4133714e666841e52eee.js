@@ -168,7 +168,27 @@ class DerivedProps {
 // The core dynamic of the SEIR model is given next in terms of binomial and negative binomial distributions
 // Our negative binomial diefinition follows that of Wikipedia.
 
+function normal(mean, variance) {
+    // Box-Muller Transform
+    let u1 = Math.random()
+    let u2 = Math.random()
+    let z = Math.sqrt(-2. * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
+    let n = mean + z * Math.sqrt(variance)
+    if (n < 0.) {n = 0.}
+    return Math.round(n)
+}
+
 function binom(N, p) {
+
+    // Performance optimisation
+    let mean = N*p
+    let anti_mean = N*(1-p)
+    
+    if (mean > 10 && anti_mean > 10){
+        return normal(mean, mean*(1-p))
+    }
+
+    // actual simulation
     let suc = 0
     for (let n = 0; n < N; n++) {
         if (Math.random() < p) { suc++ }
@@ -178,6 +198,16 @@ function binom(N, p) {
 
 function neg_binom(r, p) {
     if (p == 0.) { console.log("Negative binomial was called with p = 0"); return 0 } // Convenient failure mode
+    if (p == 1.) { console.log("Negative binomial was called with p = 1"); return Infinity } // Convenient failure mode
+
+    // Performance optimisation, for justification of cutoff 20 see the Julia playground
+    let mean = r*p/(1-p)
+    if (mean > 20){
+        let variance = mean/(1-p)
+        return normal(mean, variance)
+    }
+
+    // actual simulation
     let suc = 0;
     let fai = 0;
     while (fai < r) {
@@ -340,7 +370,7 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
     let delta_I = deltas[1] // newly infectious
     let delta_R = deltas[2] // newly removed
 
-    let deltas_m = get_deltas(reg.E[now], reg.Im[now], reg.travel_Im, dyn_pars.E_to_I.value, dyn_pars.I_to_R.value, local_mu_m, dyn_pars.k.value, v_eff, dyn_pars.bck_rate_m.value)
+    let deltas_m = get_deltas(reg.Em[now], reg.Im[now], reg.travel_Im, dyn_pars.E_to_I.value, dyn_pars.I_to_R.value, local_mu_m, dyn_pars.k.value, v_eff, dyn_pars.bck_rate_m.value)
 
     let delta_Em = deltas_m[0] // newly exposed mutant
     let delta_Im = deltas_m[1] // newly infectious mutant
@@ -972,4 +1002,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.e8ec9148f22698cb1883.js.map
+//# sourceMappingURL=bundle.4133714e666841e52eee.js.map
