@@ -30,9 +30,6 @@ export class Country {
     }
 }
 
-function update_cumulants(country){
-}
-
 class Region {
 
     constructor(N_S, N_E, N_I, N_Em, N_Im, N_R, N_total, tag, name) {
@@ -157,18 +154,18 @@ function normal(mean, variance) {
     let u2 = Math.random()
     let z = Math.sqrt(-2. * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
     let n = mean + z * Math.sqrt(variance)
-    if (n < 0.) {n = 0.}
+    if (n < 0.) { n = 0. }
     return Math.round(n)
 }
 
 function binom(N, p) {
 
     // Performance optimisation
-    let mean = N*p
-    let anti_mean = N*(1-p)
-    
-    if (mean > 10 && anti_mean > 10){
-        return normal(mean, mean*(1-p))
+    let mean = N * p
+    let anti_mean = N * (1 - p)
+
+    if (mean > 10 && anti_mean > 10) {
+        return normal(mean, mean * (1 - p))
     }
 
     // actual simulation
@@ -184,9 +181,9 @@ function neg_binom(r, p) {
     if (p == 1.) { console.log("Negative binomial was called with p = 1"); return Infinity } // Convenient failure mode
 
     // Performance optimisation, for justification of cutoff 20 see the Julia playground
-    let mean = r*p/(1-p)
-    if (mean > 20){
-        let variance = mean/(1-p)
+    let mean = r * p / (1 - p)
+    if (mean > 20) {
+        let variance = mean / (1 - p)
         return normal(mean, variance)
     }
 
@@ -384,8 +381,9 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
     reg.seven_d_incidence.push(avg7_incidence(reg))
 
     if (now > 0) {
-        reg.seven_d_incidence_velocity.push(reg.seven_d_incidence[now+1] - reg.seven_d_incidence[now])
-        reg.cumulative_deaths.push(reg.cumulative_deaths[now]) + d}
+        reg.seven_d_incidence_velocity.push(reg.seven_d_incidence[now + 1] - reg.seven_d_incidence[now])
+        reg.cumulative_deaths.push(reg.cumulative_deaths[now]) + d
+    }
     else {
         reg.seven_d_incidence_velocity.push(0)
         reg.cumulative_deaths.push(d)
@@ -408,7 +406,7 @@ export function step_epidemic(country, regions, cm, dyn_pars, travel) {
     let now = regions[0].S.length - 1;
 
     for (let reg of regions) {
-        
+
         reg.travel_I = 0
         reg.travel_Im = 0
         for (let nei of reg.neighbours) {
