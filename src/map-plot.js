@@ -25,7 +25,7 @@ var projection = d3.geoMercator()
   .translate([svg_width / 2, svg_height / 2]);
 
 // Data and color scale
-var data = d3.map();
+// var data = d3.map();
 var legendValues = [5, 25, 50, 100, 150, 200, 300, 400];
 var colorScale = d3.scaleThreshold()
   .domain(legendValues)
