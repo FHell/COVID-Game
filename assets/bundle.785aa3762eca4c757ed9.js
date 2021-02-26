@@ -615,8 +615,10 @@ self_test();
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _game_engine__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./game-engine */ "./src/game-engine.js");
-/* harmony import */ var _sass_default_scss__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./sass/default.scss */ "./src/sass/default.scss");
-/* harmony import */ var _timeline_chart__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./timeline-chart */ "./src/timeline-chart.js");
+/* harmony import */ var _map_plot__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./map-plot */ "./src/map-plot.js");
+/* harmony import */ var _sass_default_scss__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./sass/default.scss */ "./src/sass/default.scss");
+/* harmony import */ var _timeline_chart__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./timeline-chart */ "./src/timeline-chart.js");
+
 
 
 
@@ -657,12 +659,6 @@ class State {
 }
 
 var gState = new State();
-
-function createElementFromHTML(html) {
-  let div = document.createElement('div');
-  div.innerHTML = html.trim();
-  return div;
-}
 
 function initMeasures() {
   let cm = document.getElementById("countermeasures");
@@ -723,65 +719,10 @@ function changeParams(id, value) {
 }
 
 //---- Map Rendering ----------------------------------------------------------------------------------------------------------
-var svg = d3.select("svg");
-var svg_width = 300;
-var svg_height = 400;
-
-// Map and projection
-var path = d3.geoPath();
-var projection = d3.geoMercator()
-  .scale(2200)
-  .center([12, 52])
-  .translate([svg_width / 2, svg_height / 2]);
-
-// Data and color scale
-var data = d3.map();
-var legendValues = [5, 25, 50, 100, 150, 200, 300, 400];
-var colorScale = d3.scaleThreshold()
-  .domain(legendValues)
-  .range(d3.schemeOrRd[legendValues.length + 1]);
-
-function initLegend() {
-  let cm = document.getElementById('legend');
-  var firstLegendString = '< '.concat(legendValues[0].toString());
-  cm.appendChild(createElementFromHTML(
-    `<span class="legendspan" style="background-color:${colorScale(legendValues[0] - 1)};"></span> <label >${firstLegendString}</label><br>`
-  ));
-  for (var i = 1; i < legendValues.length; i++) {
-    var legendString = ''.concat(legendValues[i - 1].toString(), ' - ', legendValues[i].toString());
-    cm.appendChild(createElementFromHTML(
-      `<span class="legendspan" style="background-color:${colorScale(legendValues[i] - 1)};"></span> <label >${legendString}</label><br>`
-    ))
-  }
-  var lastLegendString = '> '.concat(legendValues[legendValues.length - 1].toString());
-  cm.appendChild(createElementFromHTML(
-    `<span class="legendspan" style="background-color:${colorScale(legendValues[legendValues.length - 1])};"></span> <label >${lastLegendString}</label><br>`
-  ));
-}
-initLegend();
-
-function draw_map_d3(topo, fill_fn) {
-  // TODO: This recreates all geometry, we should only update the final fill state.
-  svg.selectAll("g").remove();
-  svg.append("g")
-    .selectAll("path")
-    .data(topo.features)
-    .enter()
-    .append("path")
-    .attr("d", d3.geoPath().projection(projection))     // draw each country
-    .attr("fill", fill_fn);                             // set the color of each country
-}
+(0,_map_plot__WEBPACK_IMPORTED_MODULE_1__.initLegend)();
 
 //---- Handle Simulation State ------------------------------------------------------------------------------------------------
 
-
-function draw_map(topo, state) {
-  draw_map_d3(topo, function (f) {
-    let ctag = f.properties.AGS;
-    let cr = state.regions.find(e => e.tag == ctag);
-    return colorScale((0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.avg7_incidence)(cr));
-  });
-}
 
 function simulate_step(state) {
   state.step_no++;
@@ -830,7 +771,7 @@ function start_sim(error, topo) {
 
   gState.regions = regions;
   console.log("Initial State = ", gState);
-  draw_map(topo, gState);
+  (0,_map_plot__WEBPACK_IMPORTED_MODULE_1__.draw_map)(topo, gState);
 
   console.log("done");
 
@@ -838,7 +779,7 @@ function start_sim(error, topo) {
     if (state.step_no > MAX_DAYS) { running = false; }
     if (running) {
       simulate_step(state);
-      draw_map(topo, state);
+      (0,_map_plot__WEBPACK_IMPORTED_MODULE_1__.draw_map)(topo, state);
       timelineChart.update();
       updateProgressBar(state.step_no);
       console.log("Rendered state", state);
@@ -847,9 +788,94 @@ function start_sim(error, topo) {
     setTimeout(updateLoop, 1000, topo, gState);
   };
   setTimeout(updateLoop, 1000, topo, gState);
-  timelineChart = new _timeline_chart__WEBPACK_IMPORTED_MODULE_2__.default($('#charts')[0], gState.country.I);
+  timelineChart = new _timeline_chart__WEBPACK_IMPORTED_MODULE_3__.default($('#charts')[0], gState.country.I);
 }
 
+
+/***/ }),
+
+/***/ "./src/map-plot.js":
+/*!*************************!*\
+  !*** ./src/map-plot.js ***!
+  \*************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "initLegend": () => (/* binding */ initLegend),
+/* harmony export */   "draw_map": () => (/* binding */ draw_map)
+/* harmony export */ });
+/* harmony import */ var _sass_default_scss__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./sass/default.scss */ "./src/sass/default.scss");
+/* harmony import */ var _game_engine__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./game-engine */ "./src/game-engine.js");
+
+
+
+
+
+function createElementFromHTML(html) {
+    let div = document.createElement('div');
+    div.innerHTML = html.trim();
+    return div;
+  }
+
+
+//---- Map Rendering ----------------------------------------------------------------------------------------------------------
+var svg = d3.select("svg");
+var svg_width = 300;
+var svg_height = 400;
+
+// Map and projection
+var path = d3.geoPath();
+var projection = d3.geoMercator()
+  .scale(2200)
+  .center([12, 52])
+  .translate([svg_width / 2, svg_height / 2]);
+
+// Data and color scale
+var data = d3.map();
+var legendValues = [5, 25, 50, 100, 150, 200, 300, 400];
+var colorScale = d3.scaleThreshold()
+  .domain(legendValues)
+  .range(d3.schemeOrRd[legendValues.length + 1]);
+
+function initLegend() {
+  let cm = document.getElementById('legend');
+  var firstLegendString = '< '.concat(legendValues[0].toString());
+  cm.appendChild(createElementFromHTML(
+    `<span class="legendspan" style="background-color:${colorScale(legendValues[0] - 1)};"></span> <label >${firstLegendString}</label><br>`
+  ));
+  for (var i = 1; i < legendValues.length; i++) {
+    var legendString = ''.concat(legendValues[i - 1].toString(), ' - ', legendValues[i].toString());
+    cm.appendChild(createElementFromHTML(
+      `<span class="legendspan" style="background-color:${colorScale(legendValues[i] - 1)};"></span> <label >${legendString}</label><br>`
+    ))
+  }
+  var lastLegendString = '> '.concat(legendValues[legendValues.length - 1].toString());
+  cm.appendChild(createElementFromHTML(
+    `<span class="legendspan" style="background-color:${colorScale(legendValues[legendValues.length - 1])};"></span> <label >${lastLegendString}</label><br>`
+  ));
+}
+
+function draw_map_d3(topo, fill_fn) {
+  // TODO: This recreates all geometry, we should only update the final fill state.
+  svg.selectAll("g").remove();
+  svg.append("g")
+    .selectAll("path")
+    .data(topo.features)
+    .enter()
+    .append("path")
+    .attr("d", d3.geoPath().projection(projection))     // draw each country
+    .attr("fill", fill_fn);                             // set the color of each country
+}
+
+
+function draw_map(topo, state) {
+    draw_map_d3(topo, function (f) {
+      let ctag = f.properties.AGS;
+      let cr = state.regions.find(e => e.tag == ctag);
+      return colorScale((0,_game_engine__WEBPACK_IMPORTED_MODULE_1__.avg7_incidence)(cr));
+    });
+  }
 
 /***/ }),
 
@@ -1002,4 +1028,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.4133714e666841e52eee.js.map
+//# sourceMappingURL=bundle.785aa3762eca4c757ed9.js.map
