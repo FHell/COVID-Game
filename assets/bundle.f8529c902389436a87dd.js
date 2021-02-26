@@ -639,7 +639,7 @@ class State {
 var gState = new State();
 
 //---- Controls ---------------------------------------------------------------------------------------------------------------
-// var running = false;  // TODO: this should be in State
+
 const MAX_DAYS = 200;
 var runner = document.getElementById("run");
 const RunButtonContents = {
@@ -1033,4 +1033,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.2073923a183571961240.js.map
+//# sourceMappingURL=bundle.f8529c902389436a87dd.js.map
