@@ -13,7 +13,8 @@ import "./sass/default.scss";
 import TimelineChart from './timeline-chart';
 
 
-// state needed for Controls
+
+//---- State ------------------------------------------------------------------------------------------------------------------
 class State {
   constructor() {
     this.regions = [];
