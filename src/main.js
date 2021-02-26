@@ -12,8 +12,23 @@ import {
 import "./sass/default.scss";
 import TimelineChart from './timeline-chart';
 
+
+// state needed for Controls
+class State {
+  constructor() {
+    this.regions = [];
+    this.measures = new Measures();
+    this.covid_pars = new DynParameters();
+    this.step_no = 0;
+    this.country = new Country();
+    this.running = false;
+  }
+}
+
+var gState = new State();
+
 //---- Controls ---------------------------------------------------------------------------------------------------------------
-var running = false;  // TODO: this should be in State
+
 const MAX_DAYS = 200;
 var runner = document.getElementById("run");
 const RunButtonContents = {
@@ -21,10 +36,10 @@ const RunButtonContents = {
   RUNNING: "<i class='icon ic-pause'></i> Pause the simulation",
 }
 function updateRunButton() {
-  runner.innerHTML = running ? RunButtonContents.RUNNING : RunButtonContents.PAUSED;
+  runner.innerHTML = gState.running ? RunButtonContents.RUNNING : RunButtonContents.PAUSED;
 }
 function toggleRunButton() {
-  running = !running;
+  gState.running = !gState.running;
   updateRunButton();
 }
 
@@ -37,17 +52,7 @@ function updateProgressBar(day) {
   $('#gameProgress .progress-bar').css('width', `${(day / MAX_DAYS) * 100}%`);
 }
 
-class State {
-  constructor() {
-    this.regions = [];
-    this.measures = new Measures();
-    this.covid_pars = new DynParameters();
-    this.step_no = 0;
-    this.country = new Country();
-  }
-}
 
-var gState = new State();
 
 function initMeasures() {
   let cm = document.getElementById("countermeasures");
@@ -165,8 +170,8 @@ function start_sim(error, topo) {
   console.log("done");
 
   const updateLoop = (topo, state) => {
-    if (state.step_no > MAX_DAYS) { running = false; }
-    if (running) {
+    if (state.step_no > MAX_DAYS) { gState.running = false; }
+    if (gState.running) {
       simulate_step(state);
       draw_map(topo, state);
       timelineChart.update();
