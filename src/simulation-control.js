@@ -6,7 +6,11 @@ import {
     step_epidemic,
 } from './game-engine';
 
+import {
+    draw_map,
+  } from './map-plot';
 
+import TimelineChart from './timeline-chart';
 //---- State ------------------------------------------------------------------------------------------------------------------
 export class State {
     constructor() {
@@ -17,10 +21,12 @@ export class State {
         this.country = new Country();
         this.running = false;
         this.incidence = [];
+        this.max_days = 200;
+        this.timeline_chart = null;
     }
 }
 
-//---- Initialization --------------------------------------------------------------------------------------------------------- 
+    //---- Initialization --------------------------------------------------------------------------------------------------------- 
 function initMeasures(gState) {
     let cm = document.getElementById("countermeasures");
     Object.entries(gState.measures).forEach((e, i) => {
@@ -100,43 +106,47 @@ export function findIncidence(gState, ctag, def) {
     }
 }
 
+function updateProgressBar(gState,day) {
+    $('#gameProgressDay').html(`${day} ${day === 1 ? 'day' : 'days'}`);
+    $('#gameProgress .progress-bar').css('width', `${(day / gState.max_days) * 100}%`);
+  }
 
-// function start_sim(error, topo, gState) {
-//     var regions = []
-//     topo.features.forEach(e => {
-//         let inc = findIncidence(gState, e.properties.AGS, 115); // TODO: default incidence hardcoded to 115, should be average from CSV dataset
-//         let r = region_with_incidence(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN)
-//         // for distance between regions
-//         // two passes to prevent expensive recalculation
-//         r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
-//         regions.push(r);
-//     });
+export function start_sim(error, topo, gState) {
+    var regions = []
+    topo.features.forEach(e => {
+        let inc = findIncidence(gState, e.properties.AGS, 115); // TODO: default incidence hardcoded to 115, should be average from CSV dataset
+        let r = region_with_incidence(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN)
+        // for distance between regions
+        // two passes to prevent expensive recalculation
+        r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
+        regions.push(r);
+    });
 
-//     // second pass ... finish up distance calculations
-//     regions.forEach((src_r) => {
-//         regions.forEach((dst_r, i) => {
-//             src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
-//         });
-//     });
+    // second pass ... finish up distance calculations
+    regions.forEach((src_r) => {
+        regions.forEach((dst_r, i) => {
+            src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
+        });
+    });
 
-//     gState.regions = regions;
-//     console.log("Initial State = ", gState);
-//     draw_map(topo, gState);
+    gState.regions = regions;
+    console.log("Initial State = ", gState);
+    draw_map(topo, gState);
 
-    // console.log("done");
+    console.log("done");
 
-    // const updateLoop = (topo, state) => {
-    //   if (state.step_no > MAX_DAYS) { gState.running = false; }
-    //   if (gState.running) {
-    //     simulate_step(state);
-    //     draw_map(topo, state);
-    //     timelineChart.update();
-    //     updateProgressBar(state.step_no);
-    //     console.log("Rendered state", state);
-    //   }
+    const updateLoop = (topo, state) => {
+      if (state.step_no > state.max_days) { gState.running = false; }
+      if (gState.running) {
+        simulate_step(state);
+        draw_map(topo, state);
+        state.timeline_chart.update();
+        updateProgressBar(state.step_no);
+        console.log("Rendered state", state);
+      }
 
-    //   setTimeout(updateLoop, 1000, topo, gState);
-    // };
-    // setTimeout(updateLoop, 1000, topo, gState);
-    // timelineChart = new TimelineChart($('#charts')[0], gState.country.I);
-// }
+      setTimeout(updateLoop, 1000, topo, gState);
+    };
+    setTimeout(updateLoop, 1000, topo, gState);
+    gState.timeline_chart = new TimelineChart($('#charts')[0], gState.country.I);
+}
