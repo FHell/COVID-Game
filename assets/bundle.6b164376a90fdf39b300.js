@@ -42,16 +42,26 @@ class Country {
         // like highscore data, number of people who died, number of
         // person-days in lockdown, etc...
 
-        this.S = []
-        this.E = []
-        this.I = []
-        this.Em = []
-        this.Im = []
-        this.R = []
+        this.S = [0]
+        this.E = [0]
+        this.I = [0]
+        this.Em = [0]
+        this.Im = [0]
+        this.R = [0]
 
         this.ratio_vac = 0
-        this.deaths = []
+
+        this.deaths = [0]
+        this.cumulative_infections = [0] // Plot this
+        this.cumulative_infections_mutation_only = [0] // Plot this
+        this.cumulative_infections_original_only = [0] // Plot this
+        this.cumulative_deaths = [0] // Plot this
+        this.seven_d_incidence = [0] // Plot this
+        this.global_tti = 0. // Give a gauge showing this.
     }
+}
+
+function update_cumulants(country){
 }
 
 class Region {
@@ -74,6 +84,11 @@ class Region {
         this.tag = tag
         this.name = name
         this.neighbours = Array() // Needs to be populated later
+
+        this.seven_d_incidence = [0] // Map this
+        this.seven_d_incidence_velocity = [0] // Map this
+        this.local_tti = 0. // Map this
+        this.cumulative_deaths = [0] // Map this
     }
 }
 
@@ -90,14 +105,13 @@ function region_with_incidence(total, incidence, tag, name) {
 
 function region_100k_u0_9_infected() {
     let total = 100000
-    let trace_capacity = total * 0.01;
     let I = [Math.round(10 * Math.random())]
     let Im = [0]
     let E = [0]
     let Em = [0]
     let R = [0]
     let S = [total - I[0]]
-    return new Region(S, E, I, Em, Im, R, total, trace_capacity, "000", "LK")
+    return new Region(S, E, I, Em, Im, R, total, "000", "LK")
 }
 
 function connect_regions_randomly(Regions) {
@@ -360,6 +374,7 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
         const te = tti_eff(reg.I[now] + reg.Im[now], dyn_pars.tti_capacity.value * reg.total, cm)
         local_mu *= te
         local_mu_m *= te
+        reg.local_tti = te
     }
 
     let v_eff = country.ratio_vac * dyn_pars.vac_eff.value
@@ -395,7 +410,19 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
     reg.Im.push(reg.Im[now] + delta_Im - delta_Rm)
     reg.R.push(reg.R[now] + delta_R + delta_Rm)
 
-    return deaths(dyn_pars, reg.I[now] + reg.Im[now], country.ratio_vac, delta_R + delta_Rm, reg.total)
+    let d = deaths(dyn_pars, reg.I[now] + reg.Im[now], country.ratio_vac, delta_R + delta_Rm, reg.total)
+
+    reg.seven_d_incidence.push(avg7_incidence(reg))
+
+    if (now > 0) {
+        reg.seven_d_incidence_velocity.push(reg.seven_d_incidence[now+1] - reg.seven_d_incidence[now])
+        reg.cumulative_deaths.push(reg.cumulative_deaths[now]) + d}
+    else {
+        reg.seven_d_incidence_velocity.push(0)
+        reg.cumulative_deaths.push(d)
+    }
+
+    return [d, delta_E, delta_Em]
 }
 
 
@@ -403,15 +430,16 @@ function step_epidemic(country, regions, cm, dyn_pars, travel) {
 
     country.ratio_vac += dyn_pars.vac_rate.value // Vaccinate some people
 
-    console.log(country.ratio_vac)
+    // console.log(country.ratio_vac)
 
     // travel is the fraction of people from a region that travel to a neighbouring region
     // in our first approximation these are simply all regions within 100km and travel is a constant fraction.
     // these people cause infections at the place they travel to as well as at home.
 
-    for (let reg of regions) {
-        let now = reg.S.length - 1;
+    let now = regions[0].S.length - 1;
 
+    for (let reg of regions) {
+        
         reg.travel_I = 0
         reg.travel_Im = 0
         for (let nei of reg.neighbours) {
@@ -424,10 +452,18 @@ function step_epidemic(country, regions, cm, dyn_pars, travel) {
 
     let mu_mult = measure_effect(cm)
     let d = 0
+    let delta_E = 0
+    let delta_Em = 0
+
 
     for (let reg of regions) {
-        d += local_step(reg, country, dyn_pars, cm, mu_mult)
+        let ls = local_step(reg, country, dyn_pars, cm, mu_mult)
+        d += ls[0]
+        delta_E += ls[1]
+        delta_Em += ls[2]
     }
+
+    // Push to the data arrays.
 
     country.S.push(count(S_now, regions))
     country.E.push(count(E_now, regions))
@@ -436,6 +472,13 @@ function step_epidemic(country, regions, cm, dyn_pars, travel) {
     country.Im.push(count(Im_now, regions))
     country.R.push(count(R_now, regions))
     country.deaths.push(d)
+
+    country.cumulative_infections.push(country.cumulative_infections[now] + delta_E + delta_Em)
+    country.cumulative_infections_mutation_only.push(country.cumulative_infections_mutation_only[now] + delta_Em)
+    country.cumulative_infections_original_only.push(country.cumulative_infections_original_only[now] + delta_E)
+    country.cumulative_deaths.push(country.cumulative_deaths[now] + d)
+    country.seven_d_incidence.push(avg7_incidence(country))
+    country.global_tti = tti_global_effectiveness(regions, dyn_pars, cm)
     // debug output
     // let re = regions[2]
 
@@ -479,7 +522,7 @@ function average(arr) { return arr.reduce((a, v) => a + v, 0) / arr.length; }
 // TODO: fix the projections above so that we can use them here
 function avg7_incidence(reg) {
     let c = 0, s = 0;
-    for (let i = reg.I.length - 1; i >= 0; i--) {
+    for (let i = reg.I.length - 3; i >= 0; i--) {
         c++;
         s += ((reg.I[i] + reg.Im[i] + reg.E[i] + reg.Em[i]) / reg.total) * 100000;
 
@@ -551,8 +594,8 @@ function init_random_regions() {
 function log_reg(Regions, dyn_pars, cm) {
     console.log([tti_global_effectiveness(Regions, dyn_pars, cm), count_susceptible(Regions), count_exposed(Regions), count_infectious(Regions), count_recovered(Regions)])
 }
-function log_country(country) {
-    console.log([S_now(country), E_now(country), I_now(country), R_now(country)])
+function log_country(c) {
+    console.log(c.global_tti, [c.seven_d_incidence, c.cumulative_deaths, c.S, c.E, c.Em, c.I, c.Im].map(get_current))
 }
 
 function self_test() {
@@ -564,10 +607,10 @@ function self_test() {
 
     console.log(one_person_timeline_average(dyn_pars, 1000))
 
-    return
+    // return
 
-    for (let n = 0; n < 15; n++) {
-        log_reg(Regions, dyn_pars, c_meas)
+    for (let n = 0; n < 150; n++) {
+        log_country(country)
 
         step_epidemic(country, Regions, c_meas, dyn_pars, 0.01)
     }
@@ -576,7 +619,7 @@ function self_test() {
     c_meas.test_trace_isolate.active = true
 
     for (let n = 0; n < 15; n++) {
-        log_reg(Regions, dyn_pars, c_meas)
+        log_country(country)
 
         step_epidemic(country, Regions, c_meas, dyn_pars, 0.01)
     }
@@ -592,11 +635,11 @@ function self_test() {
     c_meas.stay_at_home.active = true
 
     for (let n = 0; n < 25; n++) {
-        log_reg(Regions, dyn_pars, c_meas)
+        log_country(country)
 
         step_epidemic(country, Regions, c_meas, dyn_pars, 0.01)
     }
-    log_reg(Regions, dyn_pars, c_meas)
+    log_country(country)
     log_country(country)
     console.log(get_timelines(country).S.length)
 
@@ -1002,4 +1045,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.4133714e666841e52eee.js.map
+//# sourceMappingURL=bundle.6b164376a90fdf39b300.js.map
