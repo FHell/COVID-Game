@@ -1,10 +1,41 @@
+/******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
+/******/ 	var __webpack_modules__ = ({
+
+/***/ "./src/sass/default.scss":
+/*!*******************************!*\
+  !*** ./src/sass/default.scss ***!
+  \*******************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+// extracted by mini-css-extract-plugin
+
+
+/***/ }),
+
+/***/ "./src/game-engine.js":
+/*!****************************!*\
+  !*** ./src/game-engine.js ***!
+  \****************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "Country": () => (/* binding */ Country),
+/* harmony export */   "region_with_incidence": () => (/* binding */ region_with_incidence),
+/* harmony export */   "DynParameters": () => (/* binding */ DynParameters),
+/* harmony export */   "Measures": () => (/* binding */ Measures),
+/* harmony export */   "step_epidemic": () => (/* binding */ step_epidemic),
+/* harmony export */   "avg7_incidence": () => (/* binding */ avg7_incidence)
+/* harmony export */ });
 // Core data structures
 
 // We have the state of the Country and of the individual regions first.
 // These contain the timelines for various quantities, as well as some
 // basic information attached to either.
 
-export class Country {
+class Country {
     constructor() {
 
         // Here we can also save summary information that we want to show
@@ -28,6 +59,9 @@ export class Country {
         this.seven_d_incidence = [0] // Plot this
         this.global_tti = 0. // Give a gauge showing this.
     }
+}
+
+function update_cumulants(country){
 }
 
 class Region {
@@ -60,7 +94,7 @@ class Region {
 
 // An important way to initialize a region is given an incidence and a total number of people
 
-export function region_with_incidence(total, incidence, tag, name) {
+function region_with_incidence(total, incidence, tag, name) {
     let I = [incidence / 100000 * total];
     let E = [I[0] * 0.7];
     let R = [0];
@@ -91,7 +125,7 @@ function connect_regions_randomly(Regions) {
 
 // We then have the parameters for the disease and death model, as well as some properties derived from the parameters.
 
-export class DynParameters {
+class DynParameters {
     constructor() {
         // The parameters of the disease and the vaccination campaign
 
@@ -154,18 +188,18 @@ function normal(mean, variance) {
     let u2 = Math.random()
     let z = Math.sqrt(-2. * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
     let n = mean + z * Math.sqrt(variance)
-    if (n < 0.) { n = 0. }
+    if (n < 0.) {n = 0.}
     return Math.round(n)
 }
 
 function binom(N, p) {
 
     // Performance optimisation
-    let mean = N * p
-    let anti_mean = N * (1 - p)
-
-    if (mean > 10 && anti_mean > 10) {
-        return normal(mean, mean * (1 - p))
+    let mean = N*p
+    let anti_mean = N*(1-p)
+    
+    if (mean > 10 && anti_mean > 10){
+        return normal(mean, mean*(1-p))
     }
 
     // actual simulation
@@ -181,9 +215,9 @@ function neg_binom(r, p) {
     if (p == 1.) { console.log("Negative binomial was called with p = 1"); return Infinity } // Convenient failure mode
 
     // Performance optimisation, for justification of cutoff 20 see the Julia playground
-    let mean = r * p / (1 - p)
-    if (mean > 20) {
-        let variance = mean / (1 - p)
+    let mean = r*p/(1-p)
+    if (mean > 20){
+        let variance = mean/(1-p)
         return normal(mean, variance)
     }
 
@@ -289,7 +323,7 @@ function one_person_timeline_average(dyn_pars, N) {
 
 // We now come to the model of the measures
 
-export class Measures {
+class Measures {
     constructor() {
 
         this.gatherings_1000 = { value: 1 - 0.2, active: false, desc: "No gatherings with more than 1000 people" }
@@ -381,9 +415,8 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
     reg.seven_d_incidence.push(avg7_incidence(reg))
 
     if (now > 0) {
-        reg.seven_d_incidence_velocity.push(reg.seven_d_incidence[now + 1] - reg.seven_d_incidence[now])
-        reg.cumulative_deaths.push(reg.cumulative_deaths[now]) + d
-    }
+        reg.seven_d_incidence_velocity.push(reg.seven_d_incidence[now+1] - reg.seven_d_incidence[now])
+        reg.cumulative_deaths.push(reg.cumulative_deaths[now]) + d}
     else {
         reg.seven_d_incidence_velocity.push(0)
         reg.cumulative_deaths.push(d)
@@ -393,7 +426,7 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
 }
 
 
-export function step_epidemic(country, regions, cm, dyn_pars, travel) {
+function step_epidemic(country, regions, cm, dyn_pars, travel) {
 
     country.ratio_vac += dyn_pars.vac_rate.value // Vaccinate some people
 
@@ -406,7 +439,7 @@ export function step_epidemic(country, regions, cm, dyn_pars, travel) {
     let now = regions[0].S.length - 1;
 
     for (let reg of regions) {
-
+        
         reg.travel_I = 0
         reg.travel_Im = 0
         for (let nei of reg.neighbours) {
@@ -487,7 +520,7 @@ function R_now(reg) { return get_current(reg.R); }
 function average(arr) { return arr.reduce((a, v) => a + v, 0) / arr.length; }
 
 // TODO: fix the projections above so that we can use them here
-export function avg7_incidence(reg) {
+function avg7_incidence(reg) {
     let c = 0, s = 0;
     for (let i = reg.I.length - 3; i >= 0; i--) {
         c++;
@@ -613,3 +646,403 @@ function self_test() {
 }
 
 self_test();
+
+
+/***/ }),
+
+/***/ "./src/main.js":
+/*!*********************!*\
+  !*** ./src/main.js ***!
+  \*********************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _game_engine__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./game-engine */ "./src/game-engine.js");
+/* harmony import */ var _sass_default_scss__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./sass/default.scss */ "./src/sass/default.scss");
+/* harmony import */ var _timeline_chart__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./timeline-chart */ "./src/timeline-chart.js");
+
+
+
+
+//---- Controls ---------------------------------------------------------------------------------------------------------------
+var running = false;  // TODO: this should be in State
+const MAX_DAYS = 200;
+var runner = document.getElementById("run");
+const RunButtonContents = {
+  PAUSED: "<i class='icon ic-run'></i> Run the simulation",
+  RUNNING: "<i class='icon ic-pause'></i> Pause the simulation",
+}
+function updateRunButton() {
+  runner.innerHTML = running ? RunButtonContents.RUNNING : RunButtonContents.PAUSED;
+}
+function toggleRunButton() {
+  running = !running;
+  updateRunButton();
+}
+
+var runButton = document.getElementById("run");
+runButton.addEventListener('click', toggleRunButton);
+updateRunButton();
+
+function updateProgressBar(day) {
+  $('#gameProgressDay').html(`${day} ${day === 1 ? 'day' : 'days'}`);
+  $('#gameProgress .progress-bar').css('width', `${(day / MAX_DAYS) * 100}%`);
+}
+
+class State {
+  constructor() {
+    this.regions = [];
+    this.measures = new _game_engine__WEBPACK_IMPORTED_MODULE_0__.Measures();
+    this.covid_pars = new _game_engine__WEBPACK_IMPORTED_MODULE_0__.DynParameters();
+    this.step_no = 0;
+    this.country = new _game_engine__WEBPACK_IMPORTED_MODULE_0__.Country();
+  }
+}
+
+var gState = new State();
+
+function createElementFromHTML(html) {
+  let div = document.createElement('div');
+  div.innerHTML = html.trim();
+  return div;
+}
+
+function initMeasures() {
+  let cm = document.getElementById("countermeasures");
+  Object.entries(gState.measures).forEach((e, i) => {
+    const toggle = document.createElement('input');
+    toggle.setAttribute('type', 'checkbox');
+    toggle.setAttribute('id', `m${i}`);
+    toggle.setAttribute('name', `measure${i}`);
+    toggle.setAttribute('class', `custom-control-input`);
+    toggle.setAttribute('value', e[0]);
+    toggle.addEventListener('change', () => { toggleMeasure(e[0]); });
+    const label = document.createElement('label');
+    label.setAttribute('for', `m${i}`);
+    label.setAttribute('class', 'custom-control-label');
+    label.innerText = e[1].desc;
+    const container = document.createElement('div');
+    container.setAttribute('class', 'countermeasure custom-control custom-switch custom-switch-md')
+    container.appendChild(toggle);
+    container.appendChild(label);
+    cm.appendChild(container);
+  });
+}
+initMeasures();
+
+function toggleMeasure(cb) {
+  if (gState == null) { return; }
+  gState.measures.toggle(cb);
+}
+
+function initParams() {
+  let cm = document.getElementById("parameters");
+  Object.entries(gState.covid_pars).forEach((e, i) => {
+    const field = document.createElement('input');
+    field.setAttribute('class', 'form-control form-control-sm');
+    field.setAttribute('type', 'number');
+    field.setAttribute('id', `p${i}`);
+    field.setAttribute('step', '0.1');
+    field.setAttribute('min', '0');
+    field.setAttribute('max', e[1].def * 2);
+    field.addEventListener('change', () => { changeParams(e[0], field.value); });
+    field.setAttribute('value', e[1].value);
+    const label = document.createElement('label');
+    label.setAttribute('for', `p${i}`);
+    label.innerText = e[1].desc;
+    const container = document.createElement('div');
+    container.setAttribute('class', 'parameter')
+    container.appendChild(field);
+    container.appendChild(label);
+    cm.appendChild(container);
+  });
+}
+initParams();
+
+function changeParams(id, value) {
+  if (gState == null) { return; }
+  gState.covid_pars[id].value = parseFloat(value) || gState.covid_pars[id].def;
+  console.log(gState.covid_pars);
+}
+
+//---- Map Rendering ----------------------------------------------------------------------------------------------------------
+var svg = d3.select("svg");
+var svg_width = 300;
+var svg_height = 400;
+
+// Map and projection
+var path = d3.geoPath();
+var projection = d3.geoMercator()
+  .scale(2200)
+  .center([12, 52])
+  .translate([svg_width / 2, svg_height / 2]);
+
+// Data and color scale
+var data = d3.map();
+var legendValues = [5, 25, 50, 100, 150, 200, 300, 400];
+var colorScale = d3.scaleThreshold()
+  .domain(legendValues)
+  .range(d3.schemeOrRd[legendValues.length + 1]);
+
+function initLegend() {
+  let cm = document.getElementById('legend');
+  var firstLegendString = '< '.concat(legendValues[0].toString());
+  cm.appendChild(createElementFromHTML(
+    `<span class="legendspan" style="background-color:${colorScale(legendValues[0] - 1)};"></span> <label >${firstLegendString}</label><br>`
+  ));
+  for (var i = 1; i < legendValues.length; i++) {
+    var legendString = ''.concat(legendValues[i - 1].toString(), ' - ', legendValues[i].toString());
+    cm.appendChild(createElementFromHTML(
+      `<span class="legendspan" style="background-color:${colorScale(legendValues[i] - 1)};"></span> <label >${legendString}</label><br>`
+    ))
+  }
+  var lastLegendString = '> '.concat(legendValues[legendValues.length - 1].toString());
+  cm.appendChild(createElementFromHTML(
+    `<span class="legendspan" style="background-color:${colorScale(legendValues[legendValues.length - 1])};"></span> <label >${lastLegendString}</label><br>`
+  ));
+}
+initLegend();
+
+function draw_map_d3(topo, fill_fn) {
+  // TODO: This recreates all geometry, we should only update the final fill state.
+  svg.selectAll("g").remove();
+  svg.append("g")
+    .selectAll("path")
+    .data(topo.features)
+    .enter()
+    .append("path")
+    .attr("d", d3.geoPath().projection(projection))     // draw each country
+    .attr("fill", fill_fn);                             // set the color of each country
+}
+
+//---- Handle Simulation State ------------------------------------------------------------------------------------------------
+
+
+function draw_map(topo, state) {
+  draw_map_d3(topo, function (f) {
+    let ctag = f.properties.AGS;
+    let cr = state.regions.find(e => e.tag == ctag);
+    return colorScale((0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.avg7_incidence)(cr));
+  });
+}
+
+function simulate_step(state) {
+  state.step_no++;
+  (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.step_epidemic)(state.country, state.regions, state.measures, state.covid_pars, 0.01);
+}
+
+//---- Load & Preprocess Data -------------------------------------------------------------------------------------------------
+
+var incidence = [];
+function findIncidence(ctag, def) {
+  let incr = incidence.find(e => e.tag == ctag);
+  if (incr == null)  {
+    console.log("No match for tag ", ctag, " => set to default ", def);
+    return def;
+  } else {
+    return incr.inc;
+  }
+}
+
+d3.queue()
+  .defer(d3.json, "data/landkreise_simplify200.geojson")
+  .defer(d3.csv, "data/7T_Inzidenz_LK_22_1.csv", function (d) {
+    incidence.push({ name: d.Landkreis, tag: d.LKNR, active: d.Anzahl, inc: d.Inzidenz })
+  })
+  .await(start_sim);
+
+let timelineChart = null;
+
+function start_sim(error, topo) {
+  var regions = []
+  topo.features.forEach(e => {
+    let inc = findIncidence(e.properties.AGS, 115); // TODO: default incidence hardcoded to 115, should be average from CSV dataset
+    let r = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.region_with_incidence)(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN)
+    // for distance between regions
+    // two passes to prevent expensive recalculation
+    r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
+    regions.push(r);
+  });
+
+  // second pass ... finish up distance calculations
+  regions.forEach((src_r) => {
+    regions.forEach((dst_r, i) => {
+      src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
+    });
+  });
+
+  gState.regions = regions;
+  console.log("Initial State = ", gState);
+  draw_map(topo, gState);
+
+  console.log("done");
+
+  const updateLoop = (topo, state) => {
+    if (state.step_no > MAX_DAYS) { running = false; }
+    if (running) {
+      simulate_step(state);
+      draw_map(topo, state);
+      timelineChart.update();
+      updateProgressBar(state.step_no);
+      console.log("Rendered state", state);
+    }
+
+    setTimeout(updateLoop, 1000, topo, gState);
+  };
+  setTimeout(updateLoop, 1000, topo, gState);
+  timelineChart = new _timeline_chart__WEBPACK_IMPORTED_MODULE_2__.default($('#charts')[0], gState.country.I);
+}
+
+
+/***/ }),
+
+/***/ "./src/timeline-chart.js":
+/*!*******************************!*\
+  !*** ./src/timeline-chart.js ***!
+  \*******************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ TimelineChart)
+/* harmony export */ });
+class TimelineChart {
+  constructor(container, data) {
+    this.container = container;
+    this.$canvas = $('<canvas></canvas>')
+      .attr('width', 400)
+      .attr('height', 300)
+      .appendTo(container);
+    this.chart = new Chart(this.$canvas[0].getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: Array(Math.max(data.length, 28)).fill(0).map((_, i) => i + 1),
+        datasets: [{
+          data,
+          backgroundColor: '#ff5400',
+          borderColor: '#d84d08',
+          borderWidth: 1,
+          barPercentage: 1,
+          categoryPercentage: 1,
+          datalabels: {
+            color: '#fff',
+            font: { size: 10 },
+            anchor: 'end',
+            align: 'top',
+            clamp: true,
+          },
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        tooltips: { enabled: false },
+        hover: { mode: null },
+        scales: {
+          xAxes: [{
+            gridLines: {
+              color: '#000',
+              zeroLineColor: '#000',
+              drawOnChartArea: false,
+            },
+            ticks: {
+              fontSize: 10,
+              fontColor: '#000',
+            },
+          }],
+          yAxes: [{
+            gridLines: {
+              color: '#b8b8b8',
+              zeroLineColor: '#000',
+            },
+            ticks: {
+              fontSize: 10,
+              fontColor: '#000',
+              callback: value => value.toLocaleString(),
+              maxTicksLimit: 7,
+              suggestedMax: 150000,
+              suggestedMin: 0,
+            },
+          }],
+        },
+        animation: {
+          duration: 300,
+        },
+        legend: { display: false },
+      }
+    });
+  }
+
+  update() {
+    for (let i = this.chart.data.labels.length; i < this.chart.data.datasets[0].data.length; i += 1) {
+      this.chart.data.labels.push(i + 1);
+    }
+    this.chart.update();
+  }
+}
+
+
+/***/ })
+
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		if(__webpack_module_cache__[moduleId]) {
+/******/ 			return __webpack_module_cache__[moduleId].exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			// no module.id needed
+/******/ 			// no module.loaded needed
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__webpack_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__webpack_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/************************************************************************/
+/******/ 	// startup
+/******/ 	// Load entry module
+/******/ 	__webpack_require__("./src/main.js");
+/******/ 	// This entry module used 'exports' so it can't be inlined
+/******/ })()
+;
+//# sourceMappingURL=bundle.6b164376a90fdf39b300.js.map
