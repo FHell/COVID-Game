@@ -615,12 +615,8 @@ self_test();
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _simulation_control__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./simulation-control */ "./src/simulation-control.js");
-/* harmony import */ var _game_engine__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./game-engine */ "./src/game-engine.js");
-/* harmony import */ var _map_plot__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./map-plot */ "./src/map-plot.js");
-/* harmony import */ var _sass_default_scss__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./sass/default.scss */ "./src/sass/default.scss");
-/* harmony import */ var _timeline_chart__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./timeline-chart */ "./src/timeline-chart.js");
-
-
+/* harmony import */ var _map_plot__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./map-plot */ "./src/map-plot.js");
+/* harmony import */ var _sass_default_scss__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./sass/default.scss */ "./src/sass/default.scss");
 
 
 
@@ -631,7 +627,7 @@ var gState = new _simulation_control__WEBPACK_IMPORTED_MODULE_0__.State();
 
 //---- Controls ---------------------------------------------------------------------------------------------------------------
 
-const MAX_DAYS = 200;
+// const MAX_DAYS = 200;
 var runner = document.getElementById("run");
 const RunButtonContents = {
   PAUSED: "<i class='icon ic-run'></i> Run the simulation",
@@ -649,70 +645,23 @@ var runButton = document.getElementById("run");
 runButton.addEventListener('click', toggleRunButton);
 updateRunButton();
 
-function updateProgressBar(day) {
-  $('#gameProgressDay').html(`${day} ${day === 1 ? 'day' : 'days'}`);
-  $('#gameProgress .progress-bar').css('width', `${(day / MAX_DAYS) * 100}%`);
-}
+
 
 //---- Initialization --------------------------------------------------------------------------------------------------------- 
 (0,_simulation_control__WEBPACK_IMPORTED_MODULE_0__.init_Params_Measures)(gState);
 
 
 //---- Map Rendering ----------------------------------------------------------------------------------------------------------
-(0,_map_plot__WEBPACK_IMPORTED_MODULE_2__.initLegend)();
+(0,_map_plot__WEBPACK_IMPORTED_MODULE_1__.initLegend)();
 
 //---- Load & Preprocess Data -------------------------------------------------------------------------------------------------
-
-// var incidence = [];
 
 d3.queue()
   .defer(d3.json, "data/landkreise_simplify200.geojson")
   .defer(d3.csv, "data/7T_Inzidenz_LK_22_1.csv", function (d) {
     gState.incidence.push({ name: d.Landkreis, tag: d.LKNR, active: d.Anzahl, inc: d.Inzidenz })
   })
-  .await(start_sim);
-
-let timelineChart = null;
-
-function start_sim(error, topo) {
-  var regions = []
-  topo.features.forEach(e => {
-    let inc = (0,_simulation_control__WEBPACK_IMPORTED_MODULE_0__.findIncidence)(gState, e.properties.AGS, 115); // TODO: default incidence hardcoded to 115, should be average from CSV dataset
-    let r = (0,_game_engine__WEBPACK_IMPORTED_MODULE_1__.region_with_incidence)(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN)
-    // for distance between regions
-    // two passes to prevent expensive recalculation
-    r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
-    regions.push(r);
-  });
-
-  // second pass ... finish up distance calculations
-  regions.forEach((src_r) => {
-    regions.forEach((dst_r, i) => {
-      src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
-    });
-  });
-
-  gState.regions = regions;
-  console.log("Initial State = ", gState);
-  (0,_map_plot__WEBPACK_IMPORTED_MODULE_2__.draw_map)(topo, gState);
-
-  console.log("done");
-
-  const updateLoop = (topo, state) => {
-    if (state.step_no > MAX_DAYS) { gState.running = false; }
-    if (gState.running) {
-      (0,_simulation_control__WEBPACK_IMPORTED_MODULE_0__.simulate_step)(state);
-      (0,_map_plot__WEBPACK_IMPORTED_MODULE_2__.draw_map)(topo, state);
-      timelineChart.update();
-      updateProgressBar(state.step_no);
-      console.log("Rendered state", state);
-    }
-
-    setTimeout(updateLoop, 1000, topo, gState);
-  };
-  setTimeout(updateLoop, 1000, topo, gState);
-  timelineChart = new _timeline_chart__WEBPACK_IMPORTED_MODULE_4__.default($('#charts')[0], gState.country.I);
-}
+  .await((e,t) => (0,_simulation_control__WEBPACK_IMPORTED_MODULE_0__.start_sim)(e,t,gState));
 
 
 /***/ }),
@@ -813,9 +762,14 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "State": () => (/* binding */ State),
 /* harmony export */   "init_Params_Measures": () => (/* binding */ init_Params_Measures),
 /* harmony export */   "simulate_step": () => (/* binding */ simulate_step),
-/* harmony export */   "findIncidence": () => (/* binding */ findIncidence)
+/* harmony export */   "findIncidence": () => (/* binding */ findIncidence),
+/* harmony export */   "start_sim": () => (/* binding */ start_sim)
 /* harmony export */ });
 /* harmony import */ var _game_engine__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./game-engine */ "./src/game-engine.js");
+/* harmony import */ var _map_plot__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./map-plot */ "./src/map-plot.js");
+/* harmony import */ var _timeline_chart__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./timeline-chart */ "./src/timeline-chart.js");
+
+
 
 
 
@@ -829,10 +783,12 @@ class State {
         this.country = new _game_engine__WEBPACK_IMPORTED_MODULE_0__.Country();
         this.running = false;
         this.incidence = [];
+        this.max_days = 200;
+        this.timeline_chart = null;
     }
 }
 
-//---- Initialization --------------------------------------------------------------------------------------------------------- 
+    //---- Initialization --------------------------------------------------------------------------------------------------------- 
 function initMeasures(gState) {
     let cm = document.getElementById("countermeasures");
     Object.entries(gState.measures).forEach((e, i) => {
@@ -912,46 +868,50 @@ function findIncidence(gState, ctag, def) {
     }
 }
 
+function updateProgressBar(gState,day) {
+    $('#gameProgressDay').html(`${day} ${day === 1 ? 'day' : 'days'}`);
+    $('#gameProgress .progress-bar').css('width', `${(day / gState.max_days) * 100}%`);
+  }
 
-// function start_sim(error, topo, gState) {
-//     var regions = []
-//     topo.features.forEach(e => {
-//         let inc = findIncidence(gState, e.properties.AGS, 115); // TODO: default incidence hardcoded to 115, should be average from CSV dataset
-//         let r = region_with_incidence(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN)
-//         // for distance between regions
-//         // two passes to prevent expensive recalculation
-//         r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
-//         regions.push(r);
-//     });
+function start_sim(error, topo, gState) {
+    var regions = []
+    topo.features.forEach(e => {
+        let inc = findIncidence(gState, e.properties.AGS, 115); // TODO: default incidence hardcoded to 115, should be average from CSV dataset
+        let r = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.region_with_incidence)(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN)
+        // for distance between regions
+        // two passes to prevent expensive recalculation
+        r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
+        regions.push(r);
+    });
 
-//     // second pass ... finish up distance calculations
-//     regions.forEach((src_r) => {
-//         regions.forEach((dst_r, i) => {
-//             src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
-//         });
-//     });
+    // second pass ... finish up distance calculations
+    regions.forEach((src_r) => {
+        regions.forEach((dst_r, i) => {
+            src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
+        });
+    });
 
-//     gState.regions = regions;
-//     console.log("Initial State = ", gState);
-//     draw_map(topo, gState);
+    gState.regions = regions;
+    console.log("Initial State = ", gState);
+    (0,_map_plot__WEBPACK_IMPORTED_MODULE_1__.draw_map)(topo, gState);
 
-    // console.log("done");
+    console.log("done");
 
-    // const updateLoop = (topo, state) => {
-    //   if (state.step_no > MAX_DAYS) { gState.running = false; }
-    //   if (gState.running) {
-    //     simulate_step(state);
-    //     draw_map(topo, state);
-    //     timelineChart.update();
-    //     updateProgressBar(state.step_no);
-    //     console.log("Rendered state", state);
-    //   }
+    const updateLoop = (topo, state) => {
+      if (state.step_no > state.max_days) { gState.running = false; }
+      if (gState.running) {
+        simulate_step(state);
+        (0,_map_plot__WEBPACK_IMPORTED_MODULE_1__.draw_map)(topo, state);
+        state.timeline_chart.update();
+        updateProgressBar(state.step_no);
+        console.log("Rendered state", state);
+      }
 
-    //   setTimeout(updateLoop, 1000, topo, gState);
-    // };
-    // setTimeout(updateLoop, 1000, topo, gState);
-    // timelineChart = new TimelineChart($('#charts')[0], gState.country.I);
-// }
+      setTimeout(updateLoop, 1000, topo, gState);
+    };
+    setTimeout(updateLoop, 1000, topo, gState);
+    gState.timeline_chart = new _timeline_chart__WEBPACK_IMPORTED_MODULE_2__.default($('#charts')[0], gState.country.I);
+}
 
 /***/ }),
 
@@ -1104,4 +1064,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.b2b865a94cad7c14b499.js.map
+//# sourceMappingURL=bundle.64dfbb448b5782d4fd23.js.map
