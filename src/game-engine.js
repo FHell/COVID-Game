@@ -340,7 +340,7 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
     let local_mu = s_adjust * mu_mult * dyn_pars.mu.value
     let local_mu_m = s_adjust * mu_mult * dyn_pars.mu_m.value
 
-    if (cm.hard_ld_inc.active && reg.seven_d_incidence > 20) {
+    if (cm.hard_ld_inc.active && reg.seven_d_incidence[now] > 20) {
         local_mu = s_adjust * cm.hard_ld_inc.value * dyn_pars.mu.value
         local_mu_m = s_adjust * cm.hard_ld_inc.value * dyn_pars.mu_m.value
     }
@@ -404,7 +404,8 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
 
 export function step_epidemic(country, regions, cm, dyn_pars, travel) {
 
-    country.ratio_vac += dyn_pars.vac_rate.value // Vaccinate some people
+    country.ratio_vac += dyn_pars.vac_rate.value // Vaccinate some people...
+    if (country.ratio_vac > 1.) {country.ratio_vac = 1.} // ... but not more than all people.
 
     // console.log(country.ratio_vac)
 
