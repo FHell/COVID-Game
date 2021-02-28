@@ -8,7 +8,7 @@ import {
 
 import {
     draw_map,
-  } from './map-plot';
+} from './map-plot';
 
 import TimelineChart from './timeline-chart';
 //---- State ------------------------------------------------------------------------------------------------------------------
@@ -23,10 +23,11 @@ export class State {
         this.incidence = [];
         this.max_days = 200;
         this.timeline_chart = null;
+        this.scenarios = null;
     }
 }
 
-    //---- Initialization --------------------------------------------------------------------------------------------------------- 
+//---- Initialization --------------------------------------------------------------------------------------------------------- 
 function initMeasures(gState) {
     let cm = document.getElementById("countermeasures");
     Object.entries(gState.measures).forEach((e, i) => {
@@ -106,10 +107,10 @@ export function findIncidence(gState, ctag, def) {
     }
 }
 
-function updateProgressBar(gState,day) {
+function updateProgressBar(gState, day) {
     $('#gameProgressDay').html(`${day} ${day === 1 ? 'day' : 'days'}`);
     $('#gameProgress .progress-bar').css('width', `${(day / gState.max_days) * 100}%`);
-  }
+}
 
 export function start_sim(error, topo, gState) {
     var regions = []
@@ -132,21 +133,50 @@ export function start_sim(error, topo, gState) {
     gState.regions = regions;
     console.log("Initial State = ", gState);
     draw_map(topo, gState);
-
+    events.day_of_event = [10];
+    events.actions = [1];
+    init_scenario(gState, events);
     console.log("done");
 
     const updateLoop = (topo, state) => {
-      if (state.step_no > state.max_days) { gState.running = false; }
-      if (gState.running) {
-        simulate_step(state);
-        draw_map(topo, state);
-        state.timeline_chart.update();
-        updateProgressBar(state.step_no);
-        console.log("Rendered state", state);
-      }
+        if (state.step_no > state.max_days) { gState.running = false; }
+        if (gState.running) {
+            scenario_step(state);
+        }
 
-      setTimeout(updateLoop, 1000, topo, gState);
+        setTimeout(updateLoop, 1000, topo, gState);
     };
     setTimeout(updateLoop, 1000, topo, gState);
     gState.timeline_chart = new TimelineChart($('#charts')[0], gState.country.I);
 }
+
+
+
+//---- Scenarios ------------------------------------------------------------------------------------------------
+
+function init_scenario(gState, events) {
+    gState.scenario.events = events;
+}
+
+function scenario_step(gState) {
+    events = gState.scenario.events;
+    if (events.day_of_event.includes(gState.step_no)) {
+        if (events[events[events.day_of_event.indexOf(gState.step_no)]] == 1) {
+            let cm = document.getElementById("countermeasures");
+            Object.entries(gState.measures).forEach((e, i) => {
+                toggleMeasure(gState, e[0]);
+            }
+    }
+    }
+
+}
+
+function scenario_step(state) {
+    scenario_action();
+    simulate_step(state);
+    draw_map(topo, state);
+    state.timeline_chart.update();
+    updateProgressBar(state.step_no);
+    console.log("Rendered state", state);
+}
+
