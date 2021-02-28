@@ -107,7 +107,7 @@ initLegend();
 var incidence = [];
 
 d3.queue()
-  .defer(d3.json, "data/landkreise_simplify200.geojson")
+  .defer(d3.json, "data/RKI_Corona_Landkreise.geojson")
   .defer(d3.csv, "data/7T_Inzidenz_LK_22_1.csv", function (d) {
     incidence.push({ name: d.Landkreis, tag: d.LKNR, active: d.Anzahl, inc: d.Inzidenz })
   })
