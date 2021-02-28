@@ -5,10 +5,7 @@ import {
   Country,
   step_epidemic,
 } from './game-engine';
-import {
-  initLegend,
-  draw_map,
-} from './map-plot';
+import MapPlot from './map-plot';
 import "./sass/default.scss";
 import TimelineChart from './timeline-chart';
 import TimelineChartSelector from './timeline-chart-selector';
@@ -111,9 +108,6 @@ function changeParams(id, value) {
   console.log(gState.covid_pars);
 }
 
-//---- Map Rendering ----------------------------------------------------------------------------------------------------------
-initLegend();
-
 //---- Handle Simulation State ------------------------------------------------------------------------------------------------
 
 
@@ -165,15 +159,16 @@ function start_sim(error, topo) {
 
   gState.regions = regions;
   console.log("Initial State = ", gState);
-  draw_map(topo, gState);
 
+  const mapPlot = new MapPlot($('#mapPlot')[0], topo, gState);
+  mapPlot.draw();
   console.log("done");
 
   const updateLoop = (topo, state) => {
     if (state.step_no >= MAX_DAYS) { running = false; }
     if (running) {
       simulate_step(state);
-      draw_map(topo, state);
+      mapPlot.update();
       timelineChart.update();
       updateProgressBar(state.step_no);
       console.log("Rendered state", state);
