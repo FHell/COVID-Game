@@ -106,7 +106,7 @@ export class DynParameters {
         this.vac_eff = { value: 0.8, def: 0.8, desc: "Fraction of infections prevented by vaccination." }
         this.tti_capacity = { value: 0.0001, def: 0.0001, desc: "Trace capacity as fraction of total local population." }
         this.bck_rate = { value: 0.5, def: 0.5, desc: "Average number of infected coming into each region per day from outside the country." }
-        this.bck_rate_m = { value: 0.5, def: 0.5, desc: "Average number of mutant infected coming into each region per day from outside the country." }
+        this.bck_rate_m = { value: 0., def: 0., desc: "Average number of mutant infected coming into each region per day from outside the country." }
 
         // Death model
         this.hospital_capacity = { value: 0.001, def: 0.001, desc: "ICU capacity as a fraction of population." }
@@ -403,6 +403,7 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
 }
 
 
+
 export function step_epidemic(country, regions, cm, dyn_pars, travel) {
 
     country.ratio_vac += dyn_pars.vac_rate.value // Vaccinate some people...
@@ -472,6 +473,78 @@ export function step_epidemic(country, regions, cm, dyn_pars, travel) {
     // console.log(cm.gatherings_1000.active)
 
 }
+
+// For initialization it is useful to "nonestep the epidemic"
+
+function none_step(reg) {
+
+    let now = reg.S.length - 1
+
+    reg.S.push(reg.S[now])
+    reg.E.push(reg.E[now])
+    reg.Em.push(reg.Em[now])
+    reg.I.push(reg.I[now])
+    reg.Im.push(reg.Im[now])
+    reg.R.push(reg.R[now])
+
+    let d = 0
+
+    reg.seven_d_incidence.push(avg7_incidence(reg))
+
+    if (now > 0) {
+        reg.seven_d_incidence_velocity.push(reg.seven_d_incidence[now + 1] - reg.seven_d_incidence[now])
+        reg.cumulative_deaths.push(reg.cumulative_deaths[now] + d)
+    }
+    else {
+        reg.seven_d_incidence_velocity.push(0)
+        reg.cumulative_deaths.push(d)
+    }
+
+    return
+}
+
+
+export function none_step_epidemic(country, regions, cm, dyn_pars) {
+
+    let now = regions[0].S.length - 1;
+
+    for (let reg of regions) {
+        none_step(reg)
+    }
+
+    // Push to the data arrays.
+    if (country.total === undefined) {
+        country.total = regions.reduce((sum, region) => sum + region.total, 0);
+    }
+
+    country.S.push(count(S_now, regions))
+    country.E.push(count(E_now, regions))
+    country.I.push(count(I_now, regions))
+    country.Em.push(count(Em_now, regions))
+    country.Im.push(count(Im_now, regions))
+    country.R.push(count(R_now, regions))
+    country.deaths.push(0)
+
+    country.cumulative_infections.push(country.cumulative_infections[now])
+    country.cumulative_infections_mutation_only.push(country.cumulative_infections_mutation_only[now])
+    country.cumulative_infections_original_only.push(country.cumulative_infections_original_only[now])
+    country.cumulative_deaths.push(country.cumulative_deaths[now])
+    country.seven_d_incidence.push(avg7_incidence(country))
+    country.global_tti = tti_global_effectiveness(regions, dyn_pars, cm)
+    // debug output
+    // let re = regions[2]
+
+    // let now = re.S.length - 1
+
+    // let s_adjust = re.S[now] / re.total
+
+    // let local_r  = s_adjust * mu_mult * dyn_pars.mu.value
+    // console.log(tti_eff(re.I[now] + re.Im[now], dyn_pars.tti_capacity.value * reg.total, cm), mu_mult, local_r)
+    // console.log(cm.gatherings_1000.active)
+
+}
+
+// Utility functions
 
 export function get_current(field) { return field[field.length - 1]; }
 export function count(proj, r) { return r.reduce((a, v) => a + proj(v), 0); }

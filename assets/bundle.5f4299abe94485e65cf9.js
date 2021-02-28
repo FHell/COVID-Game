@@ -27,6 +27,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "DynParameters": () => (/* binding */ DynParameters),
 /* harmony export */   "Measures": () => (/* binding */ Measures),
 /* harmony export */   "step_epidemic": () => (/* binding */ step_epidemic),
+/* harmony export */   "none_step_epidemic": () => (/* binding */ none_step_epidemic),
 /* harmony export */   "get_current": () => (/* binding */ get_current),
 /* harmony export */   "count": () => (/* binding */ count),
 /* harmony export */   "avg7_incidence": () => (/* binding */ avg7_incidence),
@@ -140,7 +141,7 @@ class DynParameters {
         this.vac_eff = { value: 0.8, def: 0.8, desc: "Fraction of infections prevented by vaccination." }
         this.tti_capacity = { value: 0.0001, def: 0.0001, desc: "Trace capacity as fraction of total local population." }
         this.bck_rate = { value: 0.5, def: 0.5, desc: "Average number of infected coming into each region per day from outside the country." }
-        this.bck_rate_m = { value: 0.5, def: 0.5, desc: "Average number of mutant infected coming into each region per day from outside the country." }
+        this.bck_rate_m = { value: 0., def: 0., desc: "Average number of mutant infected coming into each region per day from outside the country." }
 
         // Death model
         this.hospital_capacity = { value: 0.001, def: 0.001, desc: "ICU capacity as a fraction of population." }
@@ -437,6 +438,7 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
 }
 
 
+
 function step_epidemic(country, regions, cm, dyn_pars, travel) {
 
     country.ratio_vac += dyn_pars.vac_rate.value // Vaccinate some people...
@@ -506,6 +508,78 @@ function step_epidemic(country, regions, cm, dyn_pars, travel) {
     // console.log(cm.gatherings_1000.active)
 
 }
+
+// For initialization it is useful to "nonestep the epidemic"
+
+function none_step(reg) {
+
+    let now = reg.S.length - 1
+
+    reg.S.push(reg.S[now])
+    reg.E.push(reg.E[now])
+    reg.Em.push(reg.Em[now])
+    reg.I.push(reg.I[now])
+    reg.Im.push(reg.Im[now])
+    reg.R.push(reg.R[now])
+
+    let d = 0
+
+    reg.seven_d_incidence.push(avg7_incidence(reg))
+
+    if (now > 0) {
+        reg.seven_d_incidence_velocity.push(reg.seven_d_incidence[now + 1] - reg.seven_d_incidence[now])
+        reg.cumulative_deaths.push(reg.cumulative_deaths[now] + d)
+    }
+    else {
+        reg.seven_d_incidence_velocity.push(0)
+        reg.cumulative_deaths.push(d)
+    }
+
+    return
+}
+
+
+function none_step_epidemic(country, regions, cm, dyn_pars) {
+
+    let now = regions[0].S.length - 1;
+
+    for (let reg of regions) {
+        none_step(reg)
+    }
+
+    // Push to the data arrays.
+    if (country.total === undefined) {
+        country.total = regions.reduce((sum, region) => sum + region.total, 0);
+    }
+
+    country.S.push(count(S_now, regions))
+    country.E.push(count(E_now, regions))
+    country.I.push(count(I_now, regions))
+    country.Em.push(count(Em_now, regions))
+    country.Im.push(count(Im_now, regions))
+    country.R.push(count(R_now, regions))
+    country.deaths.push(0)
+
+    country.cumulative_infections.push(country.cumulative_infections[now])
+    country.cumulative_infections_mutation_only.push(country.cumulative_infections_mutation_only[now])
+    country.cumulative_infections_original_only.push(country.cumulative_infections_original_only[now])
+    country.cumulative_deaths.push(country.cumulative_deaths[now])
+    country.seven_d_incidence.push(avg7_incidence(country))
+    country.global_tti = tti_global_effectiveness(regions, dyn_pars, cm)
+    // debug output
+    // let re = regions[2]
+
+    // let now = re.S.length - 1
+
+    // let s_adjust = re.S[now] / re.total
+
+    // let local_r  = s_adjust * mu_mult * dyn_pars.mu.value
+    // console.log(tti_eff(re.I[now] + re.Im[now], dyn_pars.tti_capacity.value * reg.total, cm), mu_mult, local_r)
+    // console.log(cm.gatherings_1000.active)
+
+}
+
+// Utility functions
 
 function get_current(field) { return field[field.length - 1]; }
 function count(proj, r) { return r.reduce((a, v) => a + proj(v), 0); }
@@ -781,6 +855,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "State": () => (/* binding */ State),
 /* harmony export */   "init_state_inc": () => (/* binding */ init_state_inc),
+/* harmony export */   "init_state_0": () => (/* binding */ init_state_0),
 /* harmony export */   "init_state_random": () => (/* binding */ init_state_random),
 /* harmony export */   "step_state": () => (/* binding */ step_state),
 /* harmony export */   "simulate_full_scenario": () => (/* binding */ simulate_full_scenario),
@@ -825,9 +900,34 @@ function init_state_inc(gState, data) {
     });
   });
 
+  for (let i = 0; i < 4; i++) {
+    (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.none_step_epidemic)(gState.country, gState.regions, gState.measures, gState.covid_pars);
+  }
+
   gState.topo = data;
   gState.country.total = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.count)((reg) => reg.total, gState.regions)
 }
+
+function init_state_0(gState, data) {
+  data.features.forEach(e => {
+    let r = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.region_with_incidence)(e.properties.EWZ, 0, e.properties.AGS, e.properties.GEN)
+    // for distance between regions
+    // two passes to prevent expensive recalculation
+    r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
+    gState.regions.push(r);
+  });
+
+  // second pass ... finish up distance calculations
+  gState.regions.forEach((src_r) => {
+    gState.regions.forEach((dst_r, i) => {
+      src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
+    });
+  });
+
+  gState.topo = data;
+  gState.country.total = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.count)((reg) => reg.total, gState.regions)
+}
+
 
 // Random initialization
 
@@ -1248,7 +1348,7 @@ let timelineChart = null;
 let timelineSelector = null;
 
 function start_sim(error, data) {
-  (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.init_state_inc)(gState, data)
+  (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.init_state_0)(gState, data)
 
   console.log("Initial State = ", gState);
   const mapPlot = new _map_plot__WEBPACK_IMPORTED_MODULE_1__.default($('#mapPlot')[0], gState.topo, gState);
@@ -1279,4 +1379,4 @@ function start_sim(error, data) {
 
 /******/ })()
 ;
-//# sourceMappingURL=bundle.1c2eb87025cc9ee1c19a.js.map
+//# sourceMappingURL=bundle.5f4299abe94485e65cf9.js.map

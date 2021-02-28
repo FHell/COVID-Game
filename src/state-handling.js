@@ -7,6 +7,7 @@ import {
   get_current,
   count,
   step_epidemic,
+  none_step_epidemic
 } from './game-engine';
 
 // This file defines the game state, handles the intialization,
@@ -44,9 +45,34 @@ export function init_state_inc(gState, data) {
     });
   });
 
+  for (let i = 0; i < 4; i++) {
+    none_step_epidemic(gState.country, gState.regions, gState.measures, gState.covid_pars);
+  }
+
   gState.topo = data;
   gState.country.total = count((reg) => reg.total, gState.regions)
 }
+
+export function init_state_0(gState, data) {
+  data.features.forEach(e => {
+    let r = region_with_incidence(e.properties.EWZ, 0, e.properties.AGS, e.properties.GEN)
+    // for distance between regions
+    // two passes to prevent expensive recalculation
+    r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
+    gState.regions.push(r);
+  });
+
+  // second pass ... finish up distance calculations
+  gState.regions.forEach((src_r) => {
+    gState.regions.forEach((dst_r, i) => {
+      src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
+    });
+  });
+
+  gState.topo = data;
+  gState.country.total = count((reg) => reg.total, gState.regions)
+}
+
 
 // Random initialization
 

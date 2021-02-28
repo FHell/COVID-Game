@@ -1,7 +1,8 @@
 import {
   State,
   step_state,
-  init_state_inc
+  init_state_inc,
+  init_state_0
 } from './state-handling.js';
 import MapPlot from './map-plot';
 import "./sass/default.scss";
@@ -106,7 +107,7 @@ let timelineChart = null;
 let timelineSelector = null;
 
 function start_sim(error, data) {
-  init_state_inc(gState, data)
+  init_state_0(gState, data)
 
   console.log("Initial State = ", gState);
   const mapPlot = new MapPlot($('#mapPlot')[0], gState.topo, gState);
