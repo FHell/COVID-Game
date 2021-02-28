@@ -1,0 +1,27 @@
+#parameters {
+  td {
+    vertical-align: bottom;
+  }
+  input {
+    border: none;
+    min-width: 6em;
+  }
+  label {
+    margin-bottom: 0.2rem;
+    margin-left: 0.4em;
+  }
+}
+
+#configModal {
+  .modal-body {
+    padding: 0;
+
+    label {
+      padding: 0.3em 0.4em 0.1em;
+      cursor: pointer;
+    }
+    input {
+
+    }
+  }
+}
