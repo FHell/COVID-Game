@@ -69,7 +69,7 @@ class Region {
 
     constructor(N_S, N_E, N_I, N_Em, N_Im, N_R, N_total, tag, name) {
 
-        // These should be arrays        
+        // These should be arrays
         this.S = N_S
         this.E = N_E
         this.I = N_I
@@ -476,6 +476,9 @@ function step_epidemic(country, regions, cm, dyn_pars, travel) {
     }
 
     // Push to the data arrays.
+    if (country.total === undefined) {
+        country.total = regions.reduce((sum, region) => sum + region.total, 0);
+    }
 
     country.S.push(count(S_now, regions))
     country.E.push(count(E_now, regions))
@@ -645,6 +648,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _map_plot__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./map-plot */ "./src/map-plot.js");
 /* harmony import */ var _sass_default_scss__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./sass/default.scss */ "./src/sass/default.scss");
 /* harmony import */ var _timeline_chart__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./timeline-chart */ "./src/timeline-chart.js");
+/* harmony import */ var _timeline_chart_selector__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./timeline-chart-selector */ "./src/timeline-chart-selector.js");
+
 
 
 
@@ -706,25 +711,28 @@ function toggleMeasure(cb) {
 }
 
 function initParams() {
-  let cm = document.getElementById("parameters");
+  let $cm = $("#parameters");
+  const $table = $('<table class="table table-bordered table-sm"></table>')
+    .append($('<tbody></tbody>'))
+    .appendTo($cm);
   Object.entries(gState.covid_pars).forEach((e, i) => {
-    const field = document.createElement('input');
-    field.setAttribute('class', 'form-control form-control-sm');
-    field.setAttribute('type', 'number');
-    field.setAttribute('id', `p${i}`);
-    field.setAttribute('step', '0.1');
-    field.setAttribute('min', '0');
-    field.setAttribute('max', e[1].def * 2);
-    field.addEventListener('change', () => { changeParams(e[0], field.value); });
-    field.setAttribute('value', e[1].value);
-    const label = document.createElement('label');
-    label.setAttribute('for', `p${i}`);
-    label.innerText = e[1].desc;
-    const container = document.createElement('div');
-    container.setAttribute('class', 'parameter')
-    container.appendChild(field);
-    container.appendChild(label);
-    cm.appendChild(container);
+    const $container = $('<tr class="parameter"></tr>')
+      .appendTo($table);
+
+    const $label = $('<label></label>')
+      .attr('for', `p${i}`)
+      .text(e[1].desc)
+      .appendTo($('<td></td>').appendTo($container));
+
+    const $field = $('<input class="form-control form-control-sm">')
+      .attr('type', 'number')
+      .attr('id', `p${i}`)
+      .attr('step', '0.1')
+      .attr('min', 0)
+      .attr('max', e[1].def * 2)
+      .on('change', () => { changeParams(e[0], $field.val()); })
+      .val(e[1].value)
+      .appendTo($('<td></td>').appendTo($container));
   });
 }
 initParams();
@@ -750,6 +758,7 @@ d3.queue()
   .await(start_sim);
 
 let timelineChart = null;
+let timelineSelector = null;
 
 function start_sim(error, topo) {
   (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.init_state_inc)(gState, topo, incidence)
@@ -773,7 +782,11 @@ function start_sim(error, topo) {
     setTimeout(updateLoop, 300, gState);
   };
   setTimeout(updateLoop, 300, gState);
-  timelineChart = new _timeline_chart__WEBPACK_IMPORTED_MODULE_3__.default($('#charts')[0], gState.country.seven_d_incidence);
+
+  timelineChart = new _timeline_chart__WEBPACK_IMPORTED_MODULE_3__.default($('#charts')[0], gState.country.I);
+  timelineSelector = new _timeline_chart_selector__WEBPACK_IMPORTED_MODULE_4__.default(
+    $('#chart_selector')[0], gState, timelineChart
+  );
 }
 
 
@@ -858,7 +871,7 @@ function draw_map(topo, state) {
     draw_map_d3(topo, function (f) {
       let ctag = f.properties.AGS;
       let cr = state.regions.find(e => e.tag == ctag);
-      return colorScale((0,_game_engine__WEBPACK_IMPORTED_MODULE_1__.avg7_incidence)(cr));
+      return colorScale((0,_game_engine__WEBPACK_IMPORTED_MODULE_1__.get_current)(cr.seven_d_incidence));
     });
   }
 
@@ -1002,6 +1015,72 @@ self_test();
 
 /***/ }),
 
+/***/ "./src/timeline-chart-selector.js":
+/*!****************************************!*\
+  !*** ./src/timeline-chart-selector.js ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ TimelineChartSelector)
+/* harmony export */ });
+class TimelineChartSelector {
+  constructor(container, state, timelineChart) {
+    this.container = container;
+    this.state = state;
+    this.timelineChart = timelineChart;
+
+    this.options = [
+      {
+        label: 'Infections',
+        data: [ state.country.I ],
+      },
+      {
+        label: 'Infections (cummulative)',
+        data: [ state.country.cumulative_infections ],
+      },
+      {
+        label: 'Infections (cummulative, per strain)',
+        data: [
+          state.country.cumulative_infections_original_only,
+          state.country.cumulative_infections_mutation_only,
+        ]
+      },
+      {
+        label: 'Deaths',
+        data: [ state.country.deaths ],
+      },
+      {
+        label: 'Deaths (cummulative)',
+        data: [ state.country.cumulative_deaths ],
+      },
+      {
+        label: '7-day average incidence',
+        data: [ state.country.seven_d_incidence ],
+      },
+    ];
+
+    this.$select = $('<select class="form-control form-control-sm"></select>')
+      .appendTo(this.container)
+      .on('change', this.handleChange.bind(this))
+      .append(this.options.map((option, i) => {
+        return $('<option></option>')
+          .text(option.label)
+          .attr('value',i + 1);
+      }));
+  }
+
+  handleChange() {
+    this.timelineChart.setData(
+      this.options[this.$select.val() - 1].data
+    );
+  }
+}
+
+
+/***/ }),
+
 /***/ "./src/timeline-chart.js":
 /*!*******************************!*\
   !*** ./src/timeline-chart.js ***!
@@ -1037,6 +1116,21 @@ class TimelineChart {
             align: 'top',
             clamp: true,
           },
+        },
+        {
+          data: null,
+          backgroundColor: '#3ac1e5',
+          borderColor: '#299fbc',
+          borderWidth: 1,
+          barPercentage: 1,
+          categoryPercentage: 1,
+          datalabels: {
+            color: '#fff',
+            font: { size: 10 },
+            anchor: 'end',
+            align: 'top',
+            clamp: true,
+          },
         }],
       },
       options: {
@@ -1046,6 +1140,7 @@ class TimelineChart {
         hover: { mode: null },
         scales: {
           xAxes: [{
+            stacked: true,
             gridLines: {
               color: '#000',
               zeroLineColor: '#000',
@@ -1077,6 +1172,16 @@ class TimelineChart {
         legend: { display: false },
       }
     });
+  }
+
+  setData(datasets) {
+    this.chart.data.datasets.forEach((_, i) => {
+      this.chart.data.datasets[i].data = null;
+    });
+    datasets.forEach((data, i) => {
+      this.chart.data.datasets[i].data = data;
+    });
+    this.chart.update();
   }
 
   update() {
@@ -1151,4 +1256,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.f1ae8608b74721076f94.js.map
+//# sourceMappingURL=bundle.4d5d9f5d47ecc08ee3df.js.map

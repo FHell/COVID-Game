@@ -1,7 +1,7 @@
 import "./sass/default.scss";
 
 import {
-    avg7_incidence,
+    get_current,
   } from './game-engine';
 
 
@@ -66,6 +66,6 @@ export function draw_map(topo, state) {
     draw_map_d3(topo, function (f) {
       let ctag = f.properties.AGS;
       let cr = state.regions.find(e => e.tag == ctag);
-      return colorScale(avg7_incidence(cr));
+      return colorScale(get_current(cr.seven_d_incidence));
     });
   }

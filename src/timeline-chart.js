@@ -23,6 +23,21 @@ export default class TimelineChart {
             align: 'top',
             clamp: true,
           },
+        },
+        {
+          data: null,
+          backgroundColor: '#3ac1e5',
+          borderColor: '#299fbc',
+          borderWidth: 1,
+          barPercentage: 1,
+          categoryPercentage: 1,
+          datalabels: {
+            color: '#fff',
+            font: { size: 10 },
+            anchor: 'end',
+            align: 'top',
+            clamp: true,
+          },
         }],
       },
       options: {
@@ -32,6 +47,7 @@ export default class TimelineChart {
         hover: { mode: null },
         scales: {
           xAxes: [{
+            stacked: true,
             gridLines: {
               color: '#000',
               zeroLineColor: '#000',
@@ -63,6 +79,16 @@ export default class TimelineChart {
         legend: { display: false },
       }
     });
+  }
+
+  setData(datasets) {
+    this.chart.data.datasets.forEach((_, i) => {
+      this.chart.data.datasets[i].data = null;
+    });
+    datasets.forEach((data, i) => {
+      this.chart.data.datasets[i].data = data;
+    });
+    this.chart.update();
   }
 
   update() {
