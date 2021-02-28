@@ -36,7 +36,7 @@ function zero_pad((a,b))
 end
 
 ##
-r_nb, r_n_int = samples(100, 0.2)
+r_nb, r_n_int = samples(10, 0.1)
 
 h_nb, h_n = (r_nb, r_n_int) .|> histo |> zero_pad
 
@@ -50,9 +50,11 @@ plot!(h_n, label="normal")
 ##
 using Statistics
 distance((x,y)) = sqrt(mean((x .- y) .^ 2))
+d2((x,y)) = abs(quantile(x, 0.9) - quantile(y, 0.9))
 ##
 
 approx_qual = (r,p) -> samples(r, p) .|> histo |> zero_pad |> distance
+approx_qual2 = (r,p) -> samples(r, p) |> d2
 
 ##
 approx_qual(100, 0.3)

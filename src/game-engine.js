@@ -180,9 +180,11 @@ function neg_binom(r, p) {
     if (p == 0.) { console.log("Negative binomial was called with p = 0"); return 0 } // Convenient failure mode
     if (p == 1.) { console.log("Negative binomial was called with p = 1"); return Infinity } // Convenient failure mode
 
-    // Performance optimisation, for justification of cutoff 20 see the Julia playground
-    let mean = r * p / (1 - p)
-    if (mean > 20) {
+    // Performance optimisation. This might not be fully justified for very small
+    // p which can happen when many people are infected but few are susceptible.
+    
+    if (r > 500) {
+        let mean = r * p / (1 - p)
         let variance = mean / (1 - p)
         return normal(mean, variance)
     }
@@ -193,6 +195,7 @@ function neg_binom(r, p) {
     while (fai < r) {
         if (Math.random() < p) { suc++ } else { fai++ }
     }
+    // if (fai + suc > 10000) {console.log(`Expensive NegBin, mean: ${mean}, p: ${p}; r: ${r}`)}
     return suc
 }
 
@@ -300,6 +303,7 @@ export class Measures {
         this.all_business_closed = { value: 1 - 0.3, active: false, desc: "All non-essential buisnesses are closed" }
         this.test_trace_isolate = { value: 1 - 0.33, active: false, desc: "Trace & isolate infected persons" }
         this.stay_at_home = { value: 1 - 0.1, active: false, desc: "Strict 'stay at home' orders" }
+        this.hard_ld_inc = { value: 1 - 0.9, active: false, desc: "Complete lockdown at incidence > 20" }
     }
 
     toggle(key) {
@@ -310,7 +314,7 @@ export class Measures {
 function measure_effect(cm) {
     // This is how I interpret the slide. Might or might not be true:
     let mu_mult = 1.
-    Object.keys(cm).filter(m => cm[m].active && m != "test_trace_isolate").map(m => { mu_mult *= cm[m].value })
+    Object.keys(cm).filter(m => cm[m].active && m != "test_trace_isolate" && m != "hard_ld_inc").map(m => { mu_mult *= cm[m].value })
     return mu_mult
 }
 
@@ -335,6 +339,11 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
 
     let local_mu = s_adjust * mu_mult * dyn_pars.mu.value
     let local_mu_m = s_adjust * mu_mult * dyn_pars.mu_m.value
+
+    if (cm.hard_ld_inc.active && reg.seven_d_incidence > 20) {
+        local_mu = s_adjust * cm.hard_ld_inc.value * dyn_pars.mu.value
+        local_mu_m = s_adjust * cm.hard_ld_inc.value * dyn_pars.mu_m.value
+    }
 
     if (cm.test_trace_isolate.active) {
         const te = tti_eff(reg.I[now] + reg.Im[now], dyn_pars.tti_capacity.value * reg.total, cm)
