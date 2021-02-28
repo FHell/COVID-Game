@@ -19,6 +19,7 @@ export class Country {
         this.R = [0]
 
         this.ratio_vac = 0
+        this.total = 0
 
         this.deaths = [0]
         this.cumulative_infections = [0] // Plot this
@@ -469,8 +470,8 @@ export function step_epidemic(country, regions, cm, dyn_pars, travel) {
 
 }
 
-function get_current(field) { return field[field.length - 1]; }
-function count(proj, r) { return r.reduce((a, v) => a + proj(v), 0); }
+export function get_current(field) { return field[field.length - 1]; }
+export function count(proj, r) { return r.reduce((a, v) => a + proj(v), 0); }
 
 function exposed(reg) { return get_current(reg.E) + get_current(reg.Em); }
 function infectious(reg) { return get_current(reg.I) + get_current(reg.Im); }
@@ -529,35 +530,7 @@ function tti_global_effectiveness(Regions, dyn_pars, cm) {
     return tti_prevented / n
 }
 
-// First naive implementation, use projections once they can look into the past?
-function get_timelines(Country) {
-    // ToDo: check that length Regions > 0
-    let S = Country.S
-    let E = Country.E
-    let I = Country.I
-    let Im = Country.Im
-    let Em = Country.Em
-    let R = Country.R
-    return { S: S, E: E, I: I, Im: Im, Em: Em, R: R }
-}
-
-// Things that we really want to show in the front end:
-// * Graphs of SEIR EmIm (and V once implemented) -> use get_timelines(Regions)
-// * Overall test trace isolate effectiveness (also timeline?) -> use tti_global_effectiveness(Regions)
-
-// Things we really want to show but that need a tiny bit of modeling:
-// * Total counter of Deaths and Long Covid cases results in R (simple proportional to start with)
-// * Total counter of people that went R while health system is overtaxed.
-
-// Nice to haves:
-// * On the map: Switch to mutation only.
-// * On the map: Switch to tti effectiveness.
-// * On the map: Switch to incidence rising/sinking.
-// * Graph of how many people every person infects.
-// * Change map to travel network.
-
-
-function init_random_regions() {
+export function init_random_regions() {
     let Regions = []
 
     for (let n = 0; n < 420; n++) {
@@ -618,8 +591,8 @@ function self_test() {
     }
     log_country(country)
     log_country(country)
-    console.log(get_timelines(country).S.length)
+    console.log(country.S.length)
 
 }
 
-self_test();
+// self_test();

@@ -27,7 +27,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "DynParameters": () => (/* binding */ DynParameters),
 /* harmony export */   "Measures": () => (/* binding */ Measures),
 /* harmony export */   "step_epidemic": () => (/* binding */ step_epidemic),
-/* harmony export */   "avg7_incidence": () => (/* binding */ avg7_incidence)
+/* harmony export */   "get_current": () => (/* binding */ get_current),
+/* harmony export */   "count": () => (/* binding */ count),
+/* harmony export */   "avg7_incidence": () => (/* binding */ avg7_incidence),
+/* harmony export */   "init_random_regions": () => (/* binding */ init_random_regions)
 /* harmony export */ });
 // Core data structures
 
@@ -50,6 +53,7 @@ class Country {
         this.R = [0]
 
         this.ratio_vac = 0
+        this.total = 0
 
         this.deaths = [0]
         this.cumulative_infections = [0] // Plot this
@@ -560,34 +564,6 @@ function tti_global_effectiveness(Regions, dyn_pars, cm) {
     return tti_prevented / n
 }
 
-// First naive implementation, use projections once they can look into the past?
-function get_timelines(Country) {
-    // ToDo: check that length Regions > 0
-    let S = Country.S
-    let E = Country.E
-    let I = Country.I
-    let Im = Country.Im
-    let Em = Country.Em
-    let R = Country.R
-    return { S: S, E: E, I: I, Im: Im, Em: Em, R: R }
-}
-
-// Things that we really want to show in the front end:
-// * Graphs of SEIR EmIm (and V once implemented) -> use get_timelines(Regions)
-// * Overall test trace isolate effectiveness (also timeline?) -> use tti_global_effectiveness(Regions)
-
-// Things we really want to show but that need a tiny bit of modeling:
-// * Total counter of Deaths and Long Covid cases results in R (simple proportional to start with)
-// * Total counter of people that went R while health system is overtaxed.
-
-// Nice to haves:
-// * On the map: Switch to mutation only.
-// * On the map: Switch to tti effectiveness.
-// * On the map: Switch to incidence rising/sinking.
-// * Graph of how many people every person infects.
-// * Change map to travel network.
-
-
 function init_random_regions() {
     let Regions = []
 
@@ -649,11 +625,11 @@ function self_test() {
     }
     log_country(country)
     log_country(country)
-    console.log(get_timelines(country).S.length)
+    console.log(country.S.length)
 
 }
 
-self_test();
+// self_test();
 
 
 /***/ }),
@@ -665,7 +641,7 @@ self_test();
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _game_engine__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./game-engine */ "./src/game-engine.js");
+/* harmony import */ var _state_handling_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./state-handling.js */ "./src/state-handling.js");
 /* harmony import */ var _map_plot__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./map-plot */ "./src/map-plot.js");
 /* harmony import */ var _sass_default_scss__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./sass/default.scss */ "./src/sass/default.scss");
 /* harmony import */ var _timeline_chart__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./timeline-chart */ "./src/timeline-chart.js");
@@ -699,17 +675,7 @@ function updateProgressBar(day) {
   $('#gameProgress .progress-bar').css('width', `${(day / MAX_DAYS) * 100}%`);
 }
 
-class State {
-  constructor() {
-    this.regions = [];
-    this.measures = new _game_engine__WEBPACK_IMPORTED_MODULE_0__.Measures();
-    this.covid_pars = new _game_engine__WEBPACK_IMPORTED_MODULE_0__.DynParameters();
-    this.step_no = 0;
-    this.country = new _game_engine__WEBPACK_IMPORTED_MODULE_0__.Country();
-  }
-}
-
-var gState = new State();
+var gState = new _state_handling_js__WEBPACK_IMPORTED_MODULE_0__.State();
 
 function initMeasures() {
   let cm = document.getElementById("countermeasures");
@@ -772,26 +738,9 @@ function changeParams(id, value) {
 //---- Map Rendering ----------------------------------------------------------------------------------------------------------
 (0,_map_plot__WEBPACK_IMPORTED_MODULE_1__.initLegend)();
 
-//---- Handle Simulation State ------------------------------------------------------------------------------------------------
-
-
-function simulate_step(state) {
-  state.step_no++;
-  (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.step_epidemic)(state.country, state.regions, state.measures, state.covid_pars, 0.01);
-}
-
 //---- Load & Preprocess Data -------------------------------------------------------------------------------------------------
 
 var incidence = [];
-function findIncidence(ctag, def) {
-  let incr = incidence.find(e => e.tag == ctag);
-  if (incr == null)  {
-    console.log("No match for tag ", ctag, " => set to default ", def);
-    return def;
-  } else {
-    return incr.inc;
-  }
-}
 
 d3.queue()
   .defer(d3.json, "data/landkreise_simplify200.geojson")
@@ -803,43 +752,28 @@ d3.queue()
 let timelineChart = null;
 
 function start_sim(error, topo) {
-  var regions = []
-  topo.features.forEach(e => {
-    let inc = findIncidence(e.properties.AGS, 115); // TODO: default incidence hardcoded to 115, should be average from CSV dataset
-    let r = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.region_with_incidence)(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN)
-    // for distance between regions
-    // two passes to prevent expensive recalculation
-    r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
-    regions.push(r);
-  });
+  (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.init_state_inc)(gState, topo, incidence)
 
-  // second pass ... finish up distance calculations
-  regions.forEach((src_r) => {
-    regions.forEach((dst_r, i) => {
-      src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
-    });
-  });
-
-  gState.regions = regions;
   console.log("Initial State = ", gState);
-  (0,_map_plot__WEBPACK_IMPORTED_MODULE_1__.draw_map)(topo, gState);
+
+  (0,_map_plot__WEBPACK_IMPORTED_MODULE_1__.draw_map)(gState.topo, gState);
 
   console.log("done");
 
-  const updateLoop = (topo, state) => {
+  const updateLoop = (state) => {
     if (state.step_no > MAX_DAYS) { running = false; }
     if (running) {
-      simulate_step(state);
-      (0,_map_plot__WEBPACK_IMPORTED_MODULE_1__.draw_map)(topo, state);
+      (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.step_state)(state);
+      (0,_map_plot__WEBPACK_IMPORTED_MODULE_1__.draw_map)(state.topo, state);
       timelineChart.update();
       updateProgressBar(state.step_no);
       console.log("Rendered state", state);
     }
 
-    setTimeout(updateLoop, 1000, topo, gState);
+    setTimeout(updateLoop, 300, gState);
   };
-  setTimeout(updateLoop, 1000, topo, gState);
-  timelineChart = new _timeline_chart__WEBPACK_IMPORTED_MODULE_3__.default($('#charts')[0], gState.country.I);
+  setTimeout(updateLoop, 300, gState);
+  timelineChart = new _timeline_chart__WEBPACK_IMPORTED_MODULE_3__.default($('#charts')[0], gState.country.seven_d_incidence);
 }
 
 
@@ -930,6 +864,144 @@ function draw_map(topo, state) {
 
 /***/ }),
 
+/***/ "./src/state-handling.js":
+/*!*******************************!*\
+  !*** ./src/state-handling.js ***!
+  \*******************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "State": () => (/* binding */ State),
+/* harmony export */   "init_state_inc": () => (/* binding */ init_state_inc),
+/* harmony export */   "init_state_random": () => (/* binding */ init_state_random),
+/* harmony export */   "step_state": () => (/* binding */ step_state),
+/* harmony export */   "simulate_full_scenario": () => (/* binding */ simulate_full_scenario),
+/* harmony export */   "DynParEvent": () => (/* binding */ DynParEvent),
+/* harmony export */   "log_state": () => (/* binding */ log_state)
+/* harmony export */ });
+/* harmony import */ var _game_engine__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./game-engine */ "./src/game-engine.js");
+
+
+// This file defines the game state, handles the intialization,
+// and the steping forward of the state, including
+// event handling
+
+class State {
+  constructor() {
+    this.regions = [];
+    this.measures = new _game_engine__WEBPACK_IMPORTED_MODULE_0__.Measures();
+    this.covid_pars = new _game_engine__WEBPACK_IMPORTED_MODULE_0__.DynParameters();
+    this.step_no = 0;
+    this.country = new _game_engine__WEBPACK_IMPORTED_MODULE_0__.Country();
+    this.events = []
+    this.topo = []
+    this.scenario_max_length = 200
+  }
+}
+
+// Initializing from the data as we are currently loading it,
+// this will need to be reworked with the better data sources.
+
+function findIncidence(ctag, def, incidence) {
+  let incr = incidence.find(e => e.tag == ctag);
+  if (incr == null)  {
+    console.log("No match for tag ", ctag, " => set to default ", def);
+    return def;
+  } else {
+    return incr.inc;
+  }
+}
+
+function init_state_inc(gState, topo, incidence) {
+  topo.features.forEach(e => {
+    let inc = findIncidence(e.properties.AGS, 115, incidence); // TODO: default incidence hardcoded to 115, should be average from CSV dataset
+    let r = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.region_with_incidence)(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN)
+    // for distance between regions
+    // two passes to prevent expensive recalculation
+    r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
+    gState.regions.push(r);
+  });
+
+  // second pass ... finish up distance calculations
+  gState.regions.forEach((src_r) => {
+    gState.regions.forEach((dst_r, i) => {
+      src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
+    });
+  });
+
+  gState.topo = topo;
+  gState.country.total = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.count)((reg) => reg.total, gState.regions)
+}
+
+// Random initialization
+
+function init_state_random(gState, events){
+  // Initialize a baseline scenario without any covid.
+  gState.regions = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.init_random_regions)()
+  gState.country.total = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.count)((reg) => reg.total, gState.regions)
+  gState.events = events
+  return gState
+}
+
+// State stepping forward
+
+function step_state(state) {
+  for (let e of state.events) {
+    if (e.trigger(state)) {e.action_on(state)}
+  }
+  // if (state.step_no < state.scenario_max_length) // Take this out for now, as it overlaps with MAX_DAYS handling in main.js
+  state.step_no++;
+  (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.step_epidemic)(state.country, state.regions, state.measures, state.covid_pars, 0.01);
+  
+}
+
+function simulate_full_scenario(state, cb = (s) => null){
+  while (state.step_no < state.scenario_max_length) {
+    step_state(state);
+    cb(state);
+  }
+}
+
+class DynParEvent{
+  constructor(step_no, field, value, news_item) {
+    this.step_no = step_no
+    this.value = value
+    this.field = field
+    this.news_item = news_item
+  }
+
+  trigger(state) {
+    return state.step_no == this.step_no
+  }
+
+  action_on(state) {
+    state.covid_pars[this.field].value = this.value
+    console.log(this.news_item)
+    console.log(`Set ${this.field} to ${this.value}`)
+  }
+}
+
+// Testing and logging.
+
+function log_state(s) {
+  console.log(s.country.global_tti, [s.country.seven_d_incidence, s.country.cumulative_deaths, s.country.S].map(_game_engine__WEBPACK_IMPORTED_MODULE_0__.get_current))
+}
+
+function self_test() {
+  let state = new State();
+  state.scenario_max_length = 12;
+  let events = [new DynParEvent(1, "bck_rate", 3., "Stuff happening in neighbouring country, background infection rate increase."),
+            new DynParEvent(10, "mu", 3.5, "Mutation increases base reproduction rate of virus")];
+
+  init_state_random(state, events);
+  simulate_full_scenario(state, log_state);
+}
+
+self_test();
+
+/***/ }),
+
 /***/ "./src/timeline-chart.js":
 /*!*******************************!*\
   !*** ./src/timeline-chart.js ***!
@@ -994,7 +1066,7 @@ class TimelineChart {
               fontColor: '#000',
               callback: value => value.toLocaleString(),
               maxTicksLimit: 7,
-              suggestedMax: 150000,
+              suggestedMax: 400,
               suggestedMin: 0,
             },
           }],
@@ -1079,4 +1151,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.8b9e48cfb31ed6af2156.js.map
+//# sourceMappingURL=bundle.f1ae8608b74721076f94.js.map

@@ -52,7 +52,7 @@ export default class TimelineChart {
               fontColor: '#000',
               callback: value => value.toLocaleString(),
               maxTicksLimit: 7,
-              suggestedMax: 150000,
+              suggestedMax: 400,
               suggestedMin: 0,
             },
           }],

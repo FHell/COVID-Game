@@ -1,10 +1,8 @@
 import {
-  Measures,
-  DynParameters,
-  region_with_incidence,
-  Country,
-  step_epidemic,
-} from './game-engine';
+  State,
+  step_state,
+  init_state_inc
+} from './state-handling.js';
 import {
   initLegend,
   draw_map,
@@ -35,16 +33,6 @@ updateRunButton();
 function updateProgressBar(day) {
   $('#gameProgressDay').html(`${day} ${day === 1 ? 'day' : 'days'}`);
   $('#gameProgress .progress-bar').css('width', `${(day / MAX_DAYS) * 100}%`);
-}
-
-class State {
-  constructor() {
-    this.regions = [];
-    this.measures = new Measures();
-    this.covid_pars = new DynParameters();
-    this.step_no = 0;
-    this.country = new Country();
-  }
 }
 
 var gState = new State();
@@ -110,26 +98,9 @@ function changeParams(id, value) {
 //---- Map Rendering ----------------------------------------------------------------------------------------------------------
 initLegend();
 
-//---- Handle Simulation State ------------------------------------------------------------------------------------------------
-
-
-function simulate_step(state) {
-  state.step_no++;
-  step_epidemic(state.country, state.regions, state.measures, state.covid_pars, 0.01);
-}
-
 //---- Load & Preprocess Data -------------------------------------------------------------------------------------------------
 
 var incidence = [];
-function findIncidence(ctag, def) {
-  let incr = incidence.find(e => e.tag == ctag);
-  if (incr == null)  {
-    console.log("No match for tag ", ctag, " => set to default ", def);
-    return def;
-  } else {
-    return incr.inc;
-  }
-}
 
 d3.queue()
   .defer(d3.json, "data/landkreise_simplify200.geojson")
@@ -141,41 +112,26 @@ d3.queue()
 let timelineChart = null;
 
 function start_sim(error, topo) {
-  var regions = []
-  topo.features.forEach(e => {
-    let inc = findIncidence(e.properties.AGS, 115); // TODO: default incidence hardcoded to 115, should be average from CSV dataset
-    let r = region_with_incidence(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN)
-    // for distance between regions
-    // two passes to prevent expensive recalculation
-    r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
-    regions.push(r);
-  });
+  init_state_inc(gState, topo, incidence)
 
-  // second pass ... finish up distance calculations
-  regions.forEach((src_r) => {
-    regions.forEach((dst_r, i) => {
-      src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
-    });
-  });
-
-  gState.regions = regions;
   console.log("Initial State = ", gState);
-  draw_map(topo, gState);
+
+  draw_map(gState.topo, gState);
 
   console.log("done");
 
-  const updateLoop = (topo, state) => {
+  const updateLoop = (state) => {
     if (state.step_no > MAX_DAYS) { running = false; }
     if (running) {
-      simulate_step(state);
-      draw_map(topo, state);
+      step_state(state);
+      draw_map(state.topo, state);
       timelineChart.update();
       updateProgressBar(state.step_no);
       console.log("Rendered state", state);
     }
 
-    setTimeout(updateLoop, 1000, topo, gState);
+    setTimeout(updateLoop, 300, gState);
   };
-  setTimeout(updateLoop, 1000, topo, gState);
-  timelineChart = new TimelineChart($('#charts')[0], gState.country.I);
+  setTimeout(updateLoop, 300, gState);
+  timelineChart = new TimelineChart($('#charts')[0], gState.country.seven_d_incidence);
 }
