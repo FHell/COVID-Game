@@ -11,6 +11,7 @@ import {
 } from './map-plot';
 import "./sass/default.scss";
 import TimelineChart from './timeline-chart';
+import TimelineChartSelector from './timeline-chart-selector';
 
 //---- Controls ---------------------------------------------------------------------------------------------------------------
 var running = false;  // TODO: this should be in State
@@ -142,6 +143,7 @@ d3.queue()
   .await(start_sim);
 
 let timelineChart = null;
+let timelineSelector = null;
 
 function start_sim(error, topo) {
   var regions = []
@@ -180,5 +182,9 @@ function start_sim(error, topo) {
     setTimeout(updateLoop, 1000, topo, gState);
   };
   setTimeout(updateLoop, 1000, topo, gState);
+
   timelineChart = new TimelineChart($('#charts')[0], gState.country.I);
+  timelineSelector = new TimelineChartSelector(
+    $('#chart_selector')[0], gState, timelineChart
+  );
 }

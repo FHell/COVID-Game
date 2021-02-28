@@ -65,7 +65,7 @@ class Region {
 
     constructor(N_S, N_E, N_I, N_Em, N_Im, N_R, N_total, tag, name) {
 
-        // These should be arrays        
+        // These should be arrays
         this.S = N_S
         this.E = N_E
         this.I = N_I
@@ -462,6 +462,9 @@ function step_epidemic(country, regions, cm, dyn_pars, travel) {
     }
 
     // Push to the data arrays.
+    if (country.total === undefined) {
+        country.total = regions.reduce((sum, region) => sum + region.total, 0);
+    }
 
     country.S.push(count(S_now, regions))
     country.E.push(count(E_now, regions))
@@ -659,6 +662,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _map_plot__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./map-plot */ "./src/map-plot.js");
 /* harmony import */ var _sass_default_scss__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./sass/default.scss */ "./src/sass/default.scss");
 /* harmony import */ var _timeline_chart__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./timeline-chart */ "./src/timeline-chart.js");
+/* harmony import */ var _timeline_chart_selector__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./timeline-chart-selector */ "./src/timeline-chart-selector.js");
+
 
 
 
@@ -794,6 +799,7 @@ d3.queue()
   .await(start_sim);
 
 let timelineChart = null;
+let timelineSelector = null;
 
 function start_sim(error, topo) {
   var regions = []
@@ -832,7 +838,11 @@ function start_sim(error, topo) {
     setTimeout(updateLoop, 1000, topo, gState);
   };
   setTimeout(updateLoop, 1000, topo, gState);
+
   timelineChart = new _timeline_chart__WEBPACK_IMPORTED_MODULE_3__.default($('#charts')[0], gState.country.I);
+  timelineSelector = new _timeline_chart_selector__WEBPACK_IMPORTED_MODULE_4__.default(
+    $('#chart_selector')[0], gState, timelineChart
+  );
 }
 
 
@@ -923,6 +933,72 @@ function draw_map(topo, state) {
 
 /***/ }),
 
+/***/ "./src/timeline-chart-selector.js":
+/*!****************************************!*\
+  !*** ./src/timeline-chart-selector.js ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ TimelineChartSelector)
+/* harmony export */ });
+class TimelineChartSelector {
+  constructor(container, state, timelineChart) {
+    this.container = container;
+    this.state = state;
+    this.timelineChart = timelineChart;
+
+    this.options = [
+      {
+        label: 'Infections',
+        data: [ state.country.I ],
+      },
+      {
+        label: 'Infections (cummulative)',
+        data: [ state.country.cumulative_infections ],
+      },
+      {
+        label: 'Infections (cummulative, per strain)',
+        data: [
+          state.country.cumulative_infections_original_only,
+          state.country.cumulative_infections_mutation_only,
+        ]
+      },
+      {
+        label: 'Deaths',
+        data: [ state.country.deaths ],
+      },
+      {
+        label: 'Deaths (cummulative)',
+        data: [ state.country.cumulative_deaths ],
+      },
+      {
+        label: '7-day average incidence',
+        data: [ state.country.seven_d_incidence ],
+      },
+    ];
+
+    this.$select = $('<select class="form-control form-control-sm"></select>')
+      .appendTo(this.container)
+      .on('change', this.handleChange.bind(this))
+      .append(this.options.map((option, i) => {
+        return $('<option></option>')
+          .text(option.label)
+          .attr('value',i + 1);
+      }));
+  }
+
+  handleChange() {
+    this.timelineChart.setData(
+      this.options[this.$select.val() - 1].data
+    );
+  }
+}
+
+
+/***/ }),
+
 /***/ "./src/timeline-chart.js":
 /*!*******************************!*\
   !*** ./src/timeline-chart.js ***!
@@ -958,6 +1034,21 @@ class TimelineChart {
             align: 'top',
             clamp: true,
           },
+        },
+        {
+          data: null,
+          backgroundColor: '#3ac1e5',
+          borderColor: '#299fbc',
+          borderWidth: 1,
+          barPercentage: 1,
+          categoryPercentage: 1,
+          datalabels: {
+            color: '#fff',
+            font: { size: 10 },
+            anchor: 'end',
+            align: 'top',
+            clamp: true,
+          },
         }],
       },
       options: {
@@ -967,6 +1058,7 @@ class TimelineChart {
         hover: { mode: null },
         scales: {
           xAxes: [{
+            stacked: true,
             gridLines: {
               color: '#000',
               zeroLineColor: '#000',
@@ -998,6 +1090,16 @@ class TimelineChart {
         legend: { display: false },
       }
     });
+  }
+
+  setData(datasets) {
+    this.chart.data.datasets.forEach((_, i) => {
+      this.chart.data.datasets[i].data = null;
+    });
+    datasets.forEach((data, i) => {
+      this.chart.data.datasets[i].data = data;
+    });
+    this.chart.update();
   }
 
   update() {
@@ -1072,4 +1174,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.0e57b7880dcde3e13ed8.js.map
+//# sourceMappingURL=bundle.579504cf2c11a263bf8e.js.map

@@ -121,6 +121,9 @@ h2 {
   #countermeasures .countermeasure input {
     cursor: pointer; }
 
+#chart_selector {
+  margin-bottom: 1em; }
+
 #parameters td {
   vertical-align: bottom; }
 
@@ -175,4 +178,4 @@ h2 {
   font-size: 0.9em; }
 
 
-/*# sourceMappingURL=main.2a582f0882fe515435c9.css.map*/
+/*# sourceMappingURL=main.0d5adc52d47c6a54f0ee.css.map*/

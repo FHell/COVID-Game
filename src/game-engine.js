@@ -34,7 +34,7 @@ class Region {
 
     constructor(N_S, N_E, N_I, N_Em, N_Im, N_R, N_total, tag, name) {
 
-        // These should be arrays        
+        // These should be arrays
         this.S = N_S
         this.E = N_E
         this.I = N_I
@@ -431,6 +431,9 @@ export function step_epidemic(country, regions, cm, dyn_pars, travel) {
     }
 
     // Push to the data arrays.
+    if (country.total === undefined) {
+        country.total = regions.reduce((sum, region) => sum + region.total, 0);
+    }
 
     country.S.push(count(S_now, regions))
     country.E.push(count(E_now, regions))
