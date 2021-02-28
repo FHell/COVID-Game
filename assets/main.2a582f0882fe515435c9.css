@@ -114,21 +114,28 @@ h2 {
     top: 0;
     left: 0; }
 
-#parameters .parameter {
-  margin-bottom: 0.3em; }
-
-#parameters input[type=number] {
-  display: inline-block;
-  width: 5em; }
-
-#parameters label {
-  margin-left: 0.3em; }
-
 #countermeasures .countermeasure {
   margin-bottom: 0.3em; }
   #countermeasures .countermeasure label {
     cursor: pointer; }
   #countermeasures .countermeasure input {
+    cursor: pointer; }
+
+#parameters td {
+  vertical-align: bottom; }
+
+#parameters input {
+  border: none;
+  min-width: 6em; }
+
+#parameters label {
+  margin-bottom: 0.2rem;
+  margin-left: 0.4em; }
+
+#configModal .modal-body {
+  padding: 0; }
+  #configModal .modal-body label {
+    padding: 0.3em 0.4em 0.1em;
     cursor: pointer; }
 
 .btn-header-info {
@@ -168,4 +175,4 @@ h2 {
   font-size: 0.9em; }
 
 
-/*# sourceMappingURL=main.7546b54b75aeafa66137.css.map*/
+/*# sourceMappingURL=main.2a582f0882fe515435c9.css.map*/

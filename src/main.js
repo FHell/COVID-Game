@@ -78,25 +78,28 @@ function toggleMeasure(cb) {
 }
 
 function initParams() {
-  let cm = document.getElementById("parameters");
+  let $cm = $("#parameters");
+  const $table = $('<table class="table table-bordered table-sm"></table>')
+    .append($('<tbody></tbody>'))
+    .appendTo($cm);
   Object.entries(gState.covid_pars).forEach((e, i) => {
-    const field = document.createElement('input');
-    field.setAttribute('class', 'form-control form-control-sm');
-    field.setAttribute('type', 'number');
-    field.setAttribute('id', `p${i}`);
-    field.setAttribute('step', '0.1');
-    field.setAttribute('min', '0');
-    field.setAttribute('max', e[1].def * 2);
-    field.addEventListener('change', () => { changeParams(e[0], field.value); });
-    field.setAttribute('value', e[1].value);
-    const label = document.createElement('label');
-    label.setAttribute('for', `p${i}`);
-    label.innerText = e[1].desc;
-    const container = document.createElement('div');
-    container.setAttribute('class', 'parameter')
-    container.appendChild(field);
-    container.appendChild(label);
-    cm.appendChild(container);
+    const $container = $('<tr class="parameter"></tr>')
+      .appendTo($table);
+
+    const $label = $('<label></label>')
+      .attr('for', `p${i}`)
+      .text(e[1].desc)
+      .appendTo($('<td></td>').appendTo($container));
+
+    const $field = $('<input class="form-control form-control-sm">')
+      .attr('type', 'number')
+      .attr('id', `p${i}`)
+      .attr('step', '0.1')
+      .attr('min', 0)
+      .attr('max', e[1].def * 2)
+      .on('change', () => { changeParams(e[0], $field.val()); })
+      .val(e[1].value)
+      .appendTo($('<td></td>').appendTo($container));
   });
 }
 initParams();
