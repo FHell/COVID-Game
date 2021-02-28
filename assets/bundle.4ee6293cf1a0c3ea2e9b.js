@@ -785,10 +785,12 @@ class State {
         this.incidence = [];
         this.max_days = 200;
         this.timeline_chart = null;
+        this.scenario = new Scenario();
     }
 }
 
-    //---- Initialization --------------------------------------------------------------------------------------------------------- 
+
+//---- Initialization --------------------------------------------------------------------------------------------------------- 
 function initMeasures(gState) {
     let cm = document.getElementById("countermeasures");
     Object.entries(gState.measures).forEach((e, i) => {
@@ -868,10 +870,11 @@ function findIncidence(gState, ctag, def) {
     }
 }
 
-function updateProgressBar(gState,day) {
+function updateProgressBar(gState) {
+    var day = gState.step_no;
     $('#gameProgressDay').html(`${day} ${day === 1 ? 'day' : 'days'}`);
     $('#gameProgress .progress-bar').css('width', `${(day / gState.max_days) * 100}%`);
-  }
+}
 
 function start_sim(error, topo, gState) {
     var regions = []
@@ -894,23 +897,70 @@ function start_sim(error, topo, gState) {
     gState.regions = regions;
     console.log("Initial State = ", gState);
     (0,_map_plot__WEBPACK_IMPORTED_MODULE_1__.draw_map)(topo, gState);
-
+    // events.day_of_event = [10];
+    // events.actions = [1];
+    // init_scenario(gState);
     console.log("done");
 
     const updateLoop = (topo, state) => {
-      if (state.step_no > state.max_days) { gState.running = false; }
-      if (gState.running) {
-        simulate_step(state);
-        (0,_map_plot__WEBPACK_IMPORTED_MODULE_1__.draw_map)(topo, state);
-        state.timeline_chart.update();
-        updateProgressBar(state.step_no);
-        console.log("Rendered state", state);
-      }
+        if (state.step_no > state.max_days) { gState.running = false; }
+        if (gState.running) {
+            scenario_step(topo,state);
+        }
 
-      setTimeout(updateLoop, 1000, topo, gState);
+        setTimeout(updateLoop, 1000, topo, gState);
     };
     setTimeout(updateLoop, 1000, topo, gState);
     gState.timeline_chart = new _timeline_chart__WEBPACK_IMPORTED_MODULE_2__.default($('#charts')[0], gState.country.I);
+}
+
+
+
+//---- Scenarios ------------------------------------------------------------------------------------------------
+
+class Events {
+    constructor(){
+        this.day_of_event = [3];
+        this.actions = [1];
+    }
+}
+
+class Scenario {
+    constructor() {
+        this.events = new Events();
+    }
+}
+
+
+function init_scenario(gState, events) {
+    gState.scenario.events = events;
+}
+
+function scenario_action(gState) {
+    var events = gState.scenario.events;
+    if (events.day_of_event.includes(gState.step_no)) {
+        // if (events[events[events.day_of_event.indexOf(gState.step_no)]] == 1) {
+            console.log("here")
+            toggleMeasure(gState, "gatherings_1000");
+            gState.measures.gatherings_10.active = true;
+            gState.measures.gatherings_100.active = true;
+            gState.measures.gatherings_1000.active = true;
+            gState.measures.schools_unis_closed.active = true;
+            gState.measures.some_business_closed.active = true;
+            gState.measures.all_business_closed.active = true;
+            gState.measures.test_trace_isolate.active = true;
+            gState.measures.stay_at_home.active = true;
+    // }
+    }
+}
+
+function scenario_step(topo,state) {
+    scenario_action(state);
+    simulate_step(state);
+    (0,_map_plot__WEBPACK_IMPORTED_MODULE_1__.draw_map)(topo, state);
+    state.timeline_chart.update();
+    updateProgressBar(state);
+    console.log("Rendered state", state);
 }
 
 /***/ }),
@@ -1064,4 +1114,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.64dfbb448b5782d4fd23.js.map
+//# sourceMappingURL=bundle.4ee6293cf1a0c3ea2e9b.js.map
