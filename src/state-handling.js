@@ -42,7 +42,7 @@ function findIncidence(ctag, def, incidence) {
 export function init_state_inc(gState, topo, incidence) {
   topo.features.forEach(e => {
     let inc = findIncidence(e.properties.AGS, 115, incidence); // TODO: default incidence hardcoded to 115, should be average from CSV dataset
-    let r = region_with_incidence(e.properties.destatis.population, inc, e.properties.AGS, e.properties.GEN)
+    let r = region_with_incidence(e.properties.EWZ, inc, e.properties.AGS, e.properties.GEN)
     // for distance between regions
     // two passes to prevent expensive recalculation
     r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
