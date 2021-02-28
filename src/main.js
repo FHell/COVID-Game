@@ -165,7 +165,7 @@ function start_sim(error, topo) {
   console.log("done");
 
   const updateLoop = (topo, state) => {
-    if (state.step_no > MAX_DAYS) { running = false; }
+    if (state.step_no >= MAX_DAYS) { running = false; }
     if (running) {
       simulate_step(state);
       draw_map(topo, state);
