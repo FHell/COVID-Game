@@ -919,11 +919,11 @@ class TimelineChartSelector {
         data: [ state.country.I ],
       },
       {
-        label: 'Infections (cummulative)',
+        label: 'Infections (cumulative)',
         data: [ state.country.cumulative_infections ],
       },
       {
-        label: 'Infections (cummulative, per strain)',
+        label: 'Infections (cumulative, per strain)',
         data: [
           state.country.cumulative_infections_original_only,
           state.country.cumulative_infections_mutation_only,
@@ -934,7 +934,7 @@ class TimelineChartSelector {
         data: [ state.country.deaths ],
       },
       {
-        label: 'Deaths (cummulative)',
+        label: 'Deaths (cumulative)',
         data: [ state.country.cumulative_deaths ],
       },
       {
@@ -1279,4 +1279,4 @@ function start_sim(error, data) {
 
 /******/ })()
 ;
-//# sourceMappingURL=bundle.ab3809c9278affc22177.js.map
+//# sourceMappingURL=bundle.1c2eb87025cc9ee1c19a.js.map
