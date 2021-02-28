@@ -3,10 +3,7 @@ import {
   step_state,
   init_state_inc
 } from './state-handling.js';
-import {
-  initLegend,
-  draw_map,
-} from './map-plot';
+import MapPlot from './map-plot';
 import "./sass/default.scss";
 import TimelineChart from './timeline-chart';
 import TimelineChartSelector from './timeline-chart-selector';
@@ -99,11 +96,7 @@ function changeParams(id, value) {
   console.log(gState.covid_pars);
 }
 
-//---- Map Rendering ----------------------------------------------------------------------------------------------------------
-initLegend();
-
 //---- Load & Preprocess Data -------------------------------------------------------------------------------------------------
-
 var incidence = [];
 
 d3.queue()
@@ -120,17 +113,16 @@ function start_sim(error, topo) {
   init_state_inc(gState, topo, incidence)
 
   console.log("Initial State = ", gState);
-
-  draw_map(gState.topo, gState);
-
+  const mapPlot = new MapPlot($('#mapPlot')[0], topo, gState);
+  mapPlot.draw();
   console.log("done");
 
   const updateLoop = (state) => {
     if (state.step_no > MAX_DAYS) { running = false; }
     if (running) {
       step_state(state);
-      draw_map(state.topo, state);
       timelineChart.update();
+      mapPlot.update();
       updateProgressBar(state.step_no);
       console.log("Rendered state", state);
     }

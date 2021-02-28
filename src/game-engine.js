@@ -392,7 +392,7 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
 
     if (now > 0) {
         reg.seven_d_incidence_velocity.push(reg.seven_d_incidence[now + 1] - reg.seven_d_incidence[now])
-        reg.cumulative_deaths.push(reg.cumulative_deaths[now]) + d
+        reg.cumulative_deaths.push(reg.cumulative_deaths[now] + d)
     }
     else {
         reg.seven_d_incidence_velocity.push(0)
