@@ -26,23 +26,11 @@ export class State {
   }
 }
 
-// Initializing from the data as we are currently loading it,
-// this will need to be reworked with the better data sources.
+// Initializing from the RKI Data in geojson format using only population numbers and 7 day incidence.
 
-function findIncidence(ctag, def, incidence) {
-  let incr = incidence.find(e => e.tag == ctag);
-  if (incr == null)  {
-    console.log("No match for tag ", ctag, " => set to default ", def);
-    return def;
-  } else {
-    return incr.inc;
-  }
-}
-
-export function init_state_inc(gState, topo, incidence) {
-  topo.features.forEach(e => {
-    let inc = findIncidence(e.properties.AGS, 115, incidence); // TODO: default incidence hardcoded to 115, should be average from CSV dataset
-    let r = region_with_incidence(e.properties.EWZ, inc, e.properties.AGS, e.properties.GEN)
+export function init_state_inc(gState, data) {
+  data.features.forEach(e => {
+    let r = region_with_incidence(e.properties.EWZ, e.properties.cases7_per_100k, e.properties.AGS, e.properties.GEN)
     // for distance between regions
     // two passes to prevent expensive recalculation
     r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
@@ -56,7 +44,7 @@ export function init_state_inc(gState, topo, incidence) {
     });
   });
 
-  gState.topo = topo;
+  gState.topo = data;
   gState.country.total = count((reg) => reg.total, gState.regions)
 }
 
@@ -124,4 +112,4 @@ function self_test() {
   simulate_full_scenario(state, log_state);
 }
 
-self_test();
+// self_test();

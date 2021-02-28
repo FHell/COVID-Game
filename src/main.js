@@ -97,23 +97,19 @@ function changeParams(id, value) {
 }
 
 //---- Load & Preprocess Data -------------------------------------------------------------------------------------------------
-var incidence = [];
 
 d3.queue()
   .defer(d3.json, "data/RKI_Corona_Landkreise.geojson")
-  .defer(d3.csv, "data/7T_Inzidenz_LK_22_1.csv", function (d) {
-    incidence.push({ name: d.Landkreis, tag: d.LKNR, active: d.Anzahl, inc: d.Inzidenz })
-  })
   .await(start_sim);
 
 let timelineChart = null;
 let timelineSelector = null;
 
-function start_sim(error, topo) {
-  init_state_inc(gState, topo, incidence)
+function start_sim(error, data) {
+  init_state_inc(gState, data)
 
   console.log("Initial State = ", gState);
-  const mapPlot = new MapPlot($('#mapPlot')[0], topo, gState);
+  const mapPlot = new MapPlot($('#mapPlot')[0], gState.topo, gState);
   mapPlot.draw();
   console.log("done");
 
