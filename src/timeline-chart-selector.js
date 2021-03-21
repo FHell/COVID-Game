@@ -1,17 +1,31 @@
 export default class TimelineChartSelector {
   constructor(container, state, timelineChart) {
     this.container = container;
-    this.state = state;
     this.timelineChart = timelineChart;
 
+    this.initOptions(state);
+
+    this.$select = $('<select class="form-control form-control-sm"></select>')
+      .appendTo(this.container)
+      .on('change', this.handleChange.bind(this))
+      .append(this.options.map((option, i) => {
+        return $('<option></option>')
+          .text(option.label)
+          .attr('value', i + 1);
+      }));
+
+  }
+
+  initOptions(state) {
+    this.state = state;
     this.options = [
       {
         label: 'Infections',
-        data: [ state.country.I ],
+        data: [state.country.I],
       },
       {
         label: 'Infections (cumulative)',
-        data: [ state.country.cumulative_infections ],
+        data: [state.country.cumulative_infections],
       },
       {
         label: 'Infections (cumulative, per strain)',
@@ -22,26 +36,23 @@ export default class TimelineChartSelector {
       },
       {
         label: 'Deaths',
-        data: [ state.country.deaths ],
+        data: [state.country.deaths],
       },
       {
         label: 'Deaths (cumulative)',
-        data: [ state.country.cumulative_deaths ],
+        data: [state.country.cumulative_deaths],
       },
       {
         label: '7-day average incidence',
-        data: [ state.country.seven_d_incidence ],
+        data: [state.country.seven_d_incidence],
       },
     ];
 
-    this.$select = $('<select class="form-control form-control-sm"></select>')
-      .appendTo(this.container)
-      .on('change', this.handleChange.bind(this))
-      .append(this.options.map((option, i) => {
-        return $('<option></option>')
-          .text(option.label)
-          .attr('value',i + 1);
-      }));
+  }
+
+  updateState(state) {
+    this.initOptions(state);
+    this.handleChange();
   }
 
   handleChange() {

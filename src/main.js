@@ -36,6 +36,8 @@ function clickResetButton() {
   updateRunButton();
   gState = new State();
   init_state_0(gState, lk_data);
+  timelineSelector.updateState(gState);
+  mapPlot.state = gState;
   timelineChart.update();
   mapPlot.update();
   updateProgressBar(gState.step_no);
@@ -149,9 +151,7 @@ function start_sim(error, data) {
   // init_state_inc(gState, data);
   init_state_0(gState, data);
 
-  console.log(gState.regions)
-
-  console.log("Initial State = ", gState);
+  // console.log("Initial State = ", gState);
   mapPlot = new MapPlot($('#mapPlot')[0], gState.topo, gState);
   mapPlot.draw();
   console.log("done");
@@ -163,7 +163,7 @@ function start_sim(error, data) {
       timelineChart.update();
       mapPlot.update();
       updateProgressBar(state.step_no);
-      console.log("Rendered state", state);
+      // console.log("Rendered state", state);
     }
 
     setTimeout(updateLoop, 300, gState);

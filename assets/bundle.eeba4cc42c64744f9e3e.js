@@ -756,6 +756,8 @@ function clickResetButton() {
   updateRunButton();
   gState = new _state_handling_js__WEBPACK_IMPORTED_MODULE_0__.State();
   (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.init_state_0)(gState, lk_data);
+  timelineSelector.updateState(gState);
+  mapPlot.state = gState;
   timelineChart.update();
   mapPlot.update();
   updateProgressBar(gState.step_no);
@@ -869,9 +871,7 @@ function start_sim(error, data) {
   // init_state_inc(gState, data);
   (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.init_state_0)(gState, data);
 
-  console.log(gState.regions)
-
-  console.log("Initial State = ", gState);
+  // console.log("Initial State = ", gState);
   mapPlot = new _map_plot__WEBPACK_IMPORTED_MODULE_1__.default($('#mapPlot')[0], gState.topo, gState);
   mapPlot.draw();
   console.log("done");
@@ -883,7 +883,7 @@ function start_sim(error, data) {
       timelineChart.update();
       mapPlot.update();
       updateProgressBar(state.step_no);
-      console.log("Rendered state", state);
+      // console.log("Rendered state", state);
     }
 
     setTimeout(updateLoop, 300, gState);
@@ -1198,17 +1198,31 @@ __webpack_require__.r(__webpack_exports__);
 class TimelineChartSelector {
   constructor(container, state, timelineChart) {
     this.container = container;
-    this.state = state;
     this.timelineChart = timelineChart;
 
+    this.initOptions(state);
+
+    this.$select = $('<select class="form-control form-control-sm"></select>')
+      .appendTo(this.container)
+      .on('change', this.handleChange.bind(this))
+      .append(this.options.map((option, i) => {
+        return $('<option></option>')
+          .text(option.label)
+          .attr('value', i + 1);
+      }));
+
+  }
+
+  initOptions(state) {
+    this.state = state;
     this.options = [
       {
         label: 'Infections',
-        data: [ state.country.I ],
+        data: [state.country.I],
       },
       {
         label: 'Infections (cumulative)',
-        data: [ state.country.cumulative_infections ],
+        data: [state.country.cumulative_infections],
       },
       {
         label: 'Infections (cumulative, per strain)',
@@ -1219,26 +1233,23 @@ class TimelineChartSelector {
       },
       {
         label: 'Deaths',
-        data: [ state.country.deaths ],
+        data: [state.country.deaths],
       },
       {
         label: 'Deaths (cumulative)',
-        data: [ state.country.cumulative_deaths ],
+        data: [state.country.cumulative_deaths],
       },
       {
         label: '7-day average incidence',
-        data: [ state.country.seven_d_incidence ],
+        data: [state.country.seven_d_incidence],
       },
     ];
 
-    this.$select = $('<select class="form-control form-control-sm"></select>')
-      .appendTo(this.container)
-      .on('change', this.handleChange.bind(this))
-      .append(this.options.map((option, i) => {
-        return $('<option></option>')
-          .text(option.label)
-          .attr('value',i + 1);
-      }));
+  }
+
+  updateState(state) {
+    this.initOptions(state);
+    this.handleChange();
   }
 
   handleChange() {
@@ -1426,4 +1437,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.42c060c979ee75c603df.js.map
+//# sourceMappingURL=bundle.eeba4cc42c64744f9e3e.js.map
