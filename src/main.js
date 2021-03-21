@@ -29,6 +29,42 @@ var runButton = document.getElementById("run");
 runButton.addEventListener('click', toggleRunButton);
 updateRunButton();
 
+var reseter = document.getElementById("reset");
+reseter.innerHTML = "[Reset]"
+function clickResetButton() {
+  running = false;
+  updateRunButton();
+  gState = new State();
+  init_state_0(gState, lk_data);
+  timelineChart.update();
+  mapPlot.update();
+  updateProgressBar(gState.step_no);
+  console.log("Rendered state", gState);
+}
+
+var resetButton = document.getElementById("reset");
+resetButton.addEventListener('click', clickResetButton);
+
+
+
+var forward = document.getElementById("forward");
+forward.innerHTML = "[Forward]"
+function clickForwardButton() {
+  running = false;
+  while (gState.step_no < MAX_DAYS) {
+      step_state(gState);
+      updateProgressBar(gState.step_no);
+    }
+  timelineChart.update();
+  mapPlot.update();
+  console.log("Rendered state", gState);
+}
+
+var forwardButton = document.getElementById("forward");
+forwardButton.addEventListener('click', clickForwardButton);
+
+
+
 function updateProgressBar(day) {
   $('#gameProgressDay').html(`${day} ${day === 1 ? 'day' : 'days'}`);
   $('#gameProgress .progress-bar').css('width', `${(day / MAX_DAYS) * 100}%`);
@@ -105,12 +141,18 @@ d3.queue()
 
 let timelineChart = null;
 let timelineSelector = null;
+let lk_data=null;
+let mapPlot=null;
 
 function start_sim(error, data) {
-  init_state_0(gState, data)
+  lk_data = data;
+  // init_state_inc(gState, data);
+  init_state_0(gState, data);
+
+  console.log(gState.regions)
 
   console.log("Initial State = ", gState);
-  const mapPlot = new MapPlot($('#mapPlot')[0], gState.topo, gState);
+  mapPlot = new MapPlot($('#mapPlot')[0], gState.topo, gState);
   mapPlot.draw();
   console.log("done");
 

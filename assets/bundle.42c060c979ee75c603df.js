@@ -711,6 +711,194 @@ function self_test() {
 
 /***/ }),
 
+/***/ "./src/main.js":
+/*!*********************!*\
+  !*** ./src/main.js ***!
+  \*********************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _state_handling_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./state-handling.js */ "./src/state-handling.js");
+/* harmony import */ var _map_plot__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./map-plot */ "./src/map-plot.js");
+/* harmony import */ var _sass_default_scss__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./sass/default.scss */ "./src/sass/default.scss");
+/* harmony import */ var _timeline_chart__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./timeline-chart */ "./src/timeline-chart.js");
+/* harmony import */ var _timeline_chart_selector__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./timeline-chart-selector */ "./src/timeline-chart-selector.js");
+
+
+
+
+
+
+//---- Controls ---------------------------------------------------------------------------------------------------------------
+var running = false;  // TODO: this should be in State
+const MAX_DAYS = 200;
+var runner = document.getElementById("run");
+const RunButtonContents = {
+  PAUSED: "<i class='icon ic-run'></i> Run the simulation",
+  RUNNING: "<i class='icon ic-pause'></i> Pause the simulation",
+}
+function updateRunButton() {
+  runner.innerHTML = running ? RunButtonContents.RUNNING : RunButtonContents.PAUSED;
+}
+function toggleRunButton() {
+  running = !running;
+  updateRunButton();
+}
+
+var runButton = document.getElementById("run");
+runButton.addEventListener('click', toggleRunButton);
+updateRunButton();
+
+var reseter = document.getElementById("reset");
+reseter.innerHTML = "[Reset]"
+function clickResetButton() {
+  running = false;
+  updateRunButton();
+  gState = new _state_handling_js__WEBPACK_IMPORTED_MODULE_0__.State();
+  (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.init_state_0)(gState, lk_data);
+  timelineChart.update();
+  mapPlot.update();
+  updateProgressBar(gState.step_no);
+  console.log("Rendered state", gState);
+}
+
+var resetButton = document.getElementById("reset");
+resetButton.addEventListener('click', clickResetButton);
+
+
+
+var forward = document.getElementById("forward");
+forward.innerHTML = "[Forward]"
+function clickForwardButton() {
+  running = false;
+  while (gState.step_no < MAX_DAYS) {
+      (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.step_state)(gState);
+      updateProgressBar(gState.step_no);
+    }
+  timelineChart.update();
+  mapPlot.update();
+  console.log("Rendered state", gState);
+}
+
+var forwardButton = document.getElementById("forward");
+forwardButton.addEventListener('click', clickForwardButton);
+
+
+
+function updateProgressBar(day) {
+  $('#gameProgressDay').html(`${day} ${day === 1 ? 'day' : 'days'}`);
+  $('#gameProgress .progress-bar').css('width', `${(day / MAX_DAYS) * 100}%`);
+}
+
+var gState = new _state_handling_js__WEBPACK_IMPORTED_MODULE_0__.State();
+
+function initMeasures() {
+  let cm = document.getElementById("countermeasures");
+  Object.entries(gState.measures).forEach((e, i) => {
+    const toggle = document.createElement('input');
+    toggle.setAttribute('type', 'checkbox');
+    toggle.setAttribute('id', `m${i}`);
+    toggle.setAttribute('name', `measure${i}`);
+    toggle.setAttribute('class', `custom-control-input`);
+    toggle.setAttribute('value', e[0]);
+    toggle.addEventListener('change', () => { toggleMeasure(e[0]); });
+    const label = document.createElement('label');
+    label.setAttribute('for', `m${i}`);
+    label.setAttribute('class', 'custom-control-label');
+    label.innerText = e[1].desc;
+    const container = document.createElement('div');
+    container.setAttribute('class', 'countermeasure custom-control custom-switch custom-switch-md')
+    container.appendChild(toggle);
+    container.appendChild(label);
+    cm.appendChild(container);
+  });
+}
+initMeasures();
+
+function toggleMeasure(cb) {
+  if (gState == null) { return; }
+  gState.measures.toggle(cb);
+}
+
+function initParams() {
+  let $cm = $("#parameters");
+  const $table = $('<table class="table table-bordered table-sm"></table>')
+    .append($('<tbody></tbody>'))
+    .appendTo($cm);
+  Object.entries(gState.covid_pars).forEach((e, i) => {
+    const $container = $('<tr class="parameter"></tr>')
+      .appendTo($table);
+
+    const $label = $('<label></label>')
+      .attr('for', `p${i}`)
+      .text(e[1].desc)
+      .appendTo($('<td></td>').appendTo($container));
+
+    const $field = $('<input class="form-control form-control-sm">')
+      .attr('type', 'number')
+      .attr('id', `p${i}`)
+      .attr('step', '0.1')
+      .attr('min', 0)
+      .attr('max', e[1].def * 2)
+      .on('change', () => { changeParams(e[0], $field.val()); })
+      .val(e[1].value)
+      .appendTo($('<td></td>').appendTo($container));
+  });
+}
+initParams();
+
+function changeParams(id, value) {
+  if (gState == null) { return; }
+  gState.covid_pars[id].value = parseFloat(value) || gState.covid_pars[id].def;
+  console.log(gState.covid_pars);
+}
+
+//---- Load & Preprocess Data -------------------------------------------------------------------------------------------------
+
+d3.queue()
+  .defer(d3.json, "data/RKI_Corona_Landkreise.geojson")
+  .await(start_sim);
+
+let timelineChart = null;
+let timelineSelector = null;
+let lk_data=null;
+let mapPlot=null;
+
+function start_sim(error, data) {
+  lk_data = data;
+  // init_state_inc(gState, data);
+  (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.init_state_0)(gState, data);
+
+  console.log(gState.regions)
+
+  console.log("Initial State = ", gState);
+  mapPlot = new _map_plot__WEBPACK_IMPORTED_MODULE_1__.default($('#mapPlot')[0], gState.topo, gState);
+  mapPlot.draw();
+  console.log("done");
+
+  const updateLoop = (state) => {
+    if (state.step_no > MAX_DAYS) { running = false; }
+    if (running) {
+      (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.step_state)(state);
+      timelineChart.update();
+      mapPlot.update();
+      updateProgressBar(state.step_no);
+      console.log("Rendered state", state);
+    }
+
+    setTimeout(updateLoop, 300, gState);
+  };
+  setTimeout(updateLoop, 300, gState);
+
+  timelineChart = new _timeline_chart__WEBPACK_IMPORTED_MODULE_3__.default($('#charts')[0], gState.country.I);
+  timelineSelector = new _timeline_chart_selector__WEBPACK_IMPORTED_MODULE_4__.default(
+    $('#chart_selector')[0], gState, timelineChart
+  );
+}
+
+
+/***/ }),
+
 /***/ "./src/map-plot.js":
 /*!*************************!*\
   !*** ./src/map-plot.js ***!
@@ -1232,151 +1420,10 @@ class TimelineChart {
 /******/ 	})();
 /******/ 	
 /************************************************************************/
-var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
-(() => {
-/*!*********************!*\
-  !*** ./src/main.js ***!
-  \*********************/
-__webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _state_handling_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./state-handling.js */ "./src/state-handling.js");
-/* harmony import */ var _map_plot__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./map-plot */ "./src/map-plot.js");
-/* harmony import */ var _sass_default_scss__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./sass/default.scss */ "./src/sass/default.scss");
-/* harmony import */ var _timeline_chart__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./timeline-chart */ "./src/timeline-chart.js");
-/* harmony import */ var _timeline_chart_selector__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./timeline-chart-selector */ "./src/timeline-chart-selector.js");
-
-
-
-
-
-
-//---- Controls ---------------------------------------------------------------------------------------------------------------
-var running = false;  // TODO: this should be in State
-const MAX_DAYS = 200;
-var runner = document.getElementById("run");
-const RunButtonContents = {
-  PAUSED: "<i class='icon ic-run'></i> Run the simulation",
-  RUNNING: "<i class='icon ic-pause'></i> Pause the simulation",
-}
-function updateRunButton() {
-  runner.innerHTML = running ? RunButtonContents.RUNNING : RunButtonContents.PAUSED;
-}
-function toggleRunButton() {
-  running = !running;
-  updateRunButton();
-}
-
-var runButton = document.getElementById("run");
-runButton.addEventListener('click', toggleRunButton);
-updateRunButton();
-
-function updateProgressBar(day) {
-  $('#gameProgressDay').html(`${day} ${day === 1 ? 'day' : 'days'}`);
-  $('#gameProgress .progress-bar').css('width', `${(day / MAX_DAYS) * 100}%`);
-}
-
-var gState = new _state_handling_js__WEBPACK_IMPORTED_MODULE_0__.State();
-
-function initMeasures() {
-  let cm = document.getElementById("countermeasures");
-  Object.entries(gState.measures).forEach((e, i) => {
-    const toggle = document.createElement('input');
-    toggle.setAttribute('type', 'checkbox');
-    toggle.setAttribute('id', `m${i}`);
-    toggle.setAttribute('name', `measure${i}`);
-    toggle.setAttribute('class', `custom-control-input`);
-    toggle.setAttribute('value', e[0]);
-    toggle.addEventListener('change', () => { toggleMeasure(e[0]); });
-    const label = document.createElement('label');
-    label.setAttribute('for', `m${i}`);
-    label.setAttribute('class', 'custom-control-label');
-    label.innerText = e[1].desc;
-    const container = document.createElement('div');
-    container.setAttribute('class', 'countermeasure custom-control custom-switch custom-switch-md')
-    container.appendChild(toggle);
-    container.appendChild(label);
-    cm.appendChild(container);
-  });
-}
-initMeasures();
-
-function toggleMeasure(cb) {
-  if (gState == null) { return; }
-  gState.measures.toggle(cb);
-}
-
-function initParams() {
-  let $cm = $("#parameters");
-  const $table = $('<table class="table table-bordered table-sm"></table>')
-    .append($('<tbody></tbody>'))
-    .appendTo($cm);
-  Object.entries(gState.covid_pars).forEach((e, i) => {
-    const $container = $('<tr class="parameter"></tr>')
-      .appendTo($table);
-
-    const $label = $('<label></label>')
-      .attr('for', `p${i}`)
-      .text(e[1].desc)
-      .appendTo($('<td></td>').appendTo($container));
-
-    const $field = $('<input class="form-control form-control-sm">')
-      .attr('type', 'number')
-      .attr('id', `p${i}`)
-      .attr('step', '0.1')
-      .attr('min', 0)
-      .attr('max', e[1].def * 2)
-      .on('change', () => { changeParams(e[0], $field.val()); })
-      .val(e[1].value)
-      .appendTo($('<td></td>').appendTo($container));
-  });
-}
-initParams();
-
-function changeParams(id, value) {
-  if (gState == null) { return; }
-  gState.covid_pars[id].value = parseFloat(value) || gState.covid_pars[id].def;
-  console.log(gState.covid_pars);
-}
-
-//---- Load & Preprocess Data -------------------------------------------------------------------------------------------------
-
-d3.queue()
-  .defer(d3.json, "data/RKI_Corona_Landkreise.geojson")
-  .await(start_sim);
-
-let timelineChart = null;
-let timelineSelector = null;
-
-function start_sim(error, data) {
-  (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.init_state_0)(gState, data)
-
-  console.log("Initial State = ", gState);
-  const mapPlot = new _map_plot__WEBPACK_IMPORTED_MODULE_1__.default($('#mapPlot')[0], gState.topo, gState);
-  mapPlot.draw();
-  console.log("done");
-
-  const updateLoop = (state) => {
-    if (state.step_no > MAX_DAYS) { running = false; }
-    if (running) {
-      (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.step_state)(state);
-      timelineChart.update();
-      mapPlot.update();
-      updateProgressBar(state.step_no);
-      console.log("Rendered state", state);
-    }
-
-    setTimeout(updateLoop, 300, gState);
-  };
-  setTimeout(updateLoop, 300, gState);
-
-  timelineChart = new _timeline_chart__WEBPACK_IMPORTED_MODULE_3__.default($('#charts')[0], gState.country.I);
-  timelineSelector = new _timeline_chart_selector__WEBPACK_IMPORTED_MODULE_4__.default(
-    $('#chart_selector')[0], gState, timelineChart
-  );
-}
-
-})();
-
+/******/ 	// startup
+/******/ 	// Load entry module
+/******/ 	__webpack_require__("./src/main.js");
+/******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.5f4299abe94485e65cf9.js.map
+//# sourceMappingURL=bundle.42c060c979ee75c603df.js.map
