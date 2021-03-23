@@ -22,8 +22,10 @@ export class State {
     this.step_no = 0;
     this.country = new Country();
     this.events = []
+    this.messages = []
     this.topo = []
     this.scenario_max_length = 200
+    this.start_no = 0;
   }
 }
 
@@ -88,7 +90,7 @@ export function init_state_random(gState, events){
 
 export function step_state(state) {
   for (let e of state.events) {
-    if (e.trigger(state)) {e.action_on(state)}
+    if (e.trigger(state)) {e.action_on(state); state.messages.push(e.news_item)}
   }
   // if (state.step_no < state.scenario_max_length) // Take this out for now, as it overlaps with MAX_DAYS handling in main.js
   state.step_no++;

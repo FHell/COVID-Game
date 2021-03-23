@@ -733,6 +733,16 @@ __webpack_require__.r(__webpack_exports__);
 var running = false;  // TODO: this should be in State
 const MAX_DAYS = 200;
 var runner = document.getElementById("run");
+var tti_dial = document.getElementById("tti_dial");
+var hosp_dial = document.getElementById("hosp_dial");
+var vac_dial = document.getElementById("vac_dial");
+
+function updateDials(state){
+  tti_dial.innerHTML = state.country.global_tti
+  hosp_dial.innerHTML = "0" // let hos = N_total * dyn_pars.hospital_capacity.value / ((1 - v_rate) * I)
+  vac_dial.innerHTML = state.country.ratio_vac
+}
+
 const RunButtonContents = {
   PAUSED: "<i class='icon ic-run'></i> Run the simulation",
   RUNNING: "<i class='icon ic-pause'></i> Pause the simulation",
@@ -758,10 +768,7 @@ function clickResetButton() {
   (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.init_state_0)(gState, lk_data);
   timelineSelector.updateState(gState);
   mapPlot.state = gState;
-  timelineChart.update();
-  mapPlot.update();
-  updateProgressBar(gState.step_no);
-  console.log("Rendered state", gState);
+  renderState(gState)
 }
 
 var resetButton = document.getElementById("reset");
@@ -790,6 +797,14 @@ forwardButton.addEventListener('click', clickForwardButton);
 function updateProgressBar(day) {
   $('#gameProgressDay').html(`${day} ${day === 1 ? 'day' : 'days'}`);
   $('#gameProgress .progress-bar').css('width', `${(day / MAX_DAYS) * 100}%`);
+}
+
+function renderState(state) {
+  updateDials(state);
+  timelineChart.update();
+  mapPlot.update();
+  updateProgressBar(state.step_no);
+  // console.log("Rendered state", state);
 }
 
 var gState = new _state_handling_js__WEBPACK_IMPORTED_MODULE_0__.State();
@@ -880,10 +895,7 @@ function start_sim(error, data) {
     if (state.step_no > MAX_DAYS) { running = false; }
     if (running) {
       (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.step_state)(state);
-      timelineChart.update();
-      mapPlot.update();
-      updateProgressBar(state.step_no);
-      // console.log("Rendered state", state);
+      renderState(state);
     }
 
     setTimeout(updateLoop, 300, gState);
@@ -1437,4 +1449,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.eeba4cc42c64744f9e3e.js.map
+//# sourceMappingURL=bundle.909cae5314a08e11efdf.js.map

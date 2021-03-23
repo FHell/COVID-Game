@@ -66,7 +66,7 @@ export default class MapPlot {
         let cr = this.state.regions.find(e => e.tag == ctag);
         if (Array.isArray(cr[this.variable])) {
           return cr[this.variable].length > 0 ?
-            this.colorScale(cr[this.variable][cr[this.variable].length - 1]) :
+            this.colorScale(cr[this.variable][cr[this.variable].length - 1]) : // cr[this.variable][this.state.now]
             0;
         } else {
           return this.colorScale(cr[this.variable]);
