@@ -948,22 +948,29 @@ class MapPlot {
       .translate([this.width / 2, this.height / 2]);
 
     this.variable = MapPlot.defaultVariable;
-    this.setScale(MapPlot.defaultScale);
+    this.setScale(MapPlot.defaultScale,MapPlot.defaultColorScheme);
   }
 
-  setScale(scale) {
+  setScale(scale, colorScheme) {
     this.scale = scale;
-    this.colorScale = d3.scaleThreshold()
+    if (colorScheme == 'OrRd') {
+      this.colorScale = d3.scaleThreshold()
       .domain(this.scale)
       .range(d3.schemeOrRd[this.scale.length + 1]);
+    }
+    else if (colorScheme == 'YlGn'){
+      this.colorScale = d3.scaleThreshold()
+      .domain(this.scale)
+      .range(d3.schemeYlGn[this.scale.length + 1]);
+    }
   }
 
   setVariable(variable) {
     this.variable = variable;
     if (MapPlot.variables[variable].scale) {
-      this.setScale(MapPlot.variables[variable].scale);
+      this.setScale(MapPlot.variables[variable].scale, MapPlot.variables[variable].colorScheme);
     } else {
-      this.setScale(MapPlot.defaultScale);
+      this.setScale(MapPlot.defaultScale,MapPlot.defaultColorScheme);
     }
     this.update();
   }
@@ -989,7 +996,7 @@ class MapPlot {
         let cr = this.state.regions.find(e => e.tag == ctag);
         if (Array.isArray(cr[this.variable])) {
           return cr[this.variable].length > 0 ?
-            this.colorScale(cr[this.variable][cr[this.variable].length - 1]) :
+            this.colorScale(cr[this.variable][cr[this.variable].length - 1]) : // cr[this.variable][this.state.now]
             0;
         } else {
           return this.colorScale(cr[this.variable]);
@@ -1001,22 +1008,29 @@ class MapPlot {
 MapPlot.variables = {
   seven_d_incidence: {
     name: '7-day incidence',
+    scale: [5, 25, 50, 100, 150, 200, 300, 400],
+    colorScheme: 'OrRd',
   },
   seven_d_incidence_velocity: {
     name: '7-day incidence velocity',
+    scale: [0, .2, .5, .75, 1, 3, 10, 20],
+    colorScheme: 'OrRd',
   },
   local_tti: {
     name: 'Track and trace incidence',
     scale: [0, 0.1, 0.2, 0.4, 0.6, 0.8, 0.9, 1],
+    colorScheme: 'YlGn',
   },
   cumulative_deaths: {
     name: 'Cumulative deaths',
+    colorScheme: 'OrRd',
   }
 };
 
 MapPlot.defaultVariable = 'seven_d_incidence';
 
 MapPlot.defaultScale = [5, 25, 50, 100, 150, 200, 300, 400];
+MapPlot.defaultColorScheme = 'OrRd';
 
 // function createElementFromHTML(html) {
 //   let div = document.createElement('div');
@@ -1077,8 +1091,10 @@ class State {
     this.step_no = 0;
     this.country = new _game_engine__WEBPACK_IMPORTED_MODULE_0__.Country();
     this.events = []
+    this.messages = []
     this.topo = []
     this.scenario_max_length = 200
+    this.start_no = 0;
   }
 }
 
@@ -1143,7 +1159,7 @@ function init_state_random(gState, events){
 
 function step_state(state) {
   for (let e of state.events) {
-    if (e.trigger(state)) {e.action_on(state)}
+    if (e.trigger(state)) {e.action_on(state); state.messages.push(e.news_item)}
   }
   // if (state.step_no < state.scenario_max_length) // Take this out for now, as it overlaps with MAX_DAYS handling in main.js
   state.step_no++;
@@ -1449,4 +1465,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.909cae5314a08e11efdf.js.map
+//# sourceMappingURL=bundle.c76db421c2254e5d9657.js.map
