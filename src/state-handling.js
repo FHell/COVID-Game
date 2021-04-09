@@ -19,13 +19,13 @@ export class State {
     this.regions = [];
     this.measures = new Measures();
     this.covid_pars = new DynParameters();
-    this.step_no = 0;
+    this.step_no = 0; // now
     this.country = new Country();
     this.events = []
     this.messages = []
     this.topo = []
     this.scenario_max_length = 200
-    this.start_no = 0;
+    this.start_no = 0; // scenario_start
   }
 }
 

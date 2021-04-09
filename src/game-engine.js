@@ -296,14 +296,15 @@ function one_person_timeline_average(dyn_pars, N) {
 export class Measures {
     constructor() {
 
-        this.gatherings_1000 = { value: 1 - 0.2, active: false, desc: "No gatherings with more than 1000 people" }
-        this.gatherings_100 = { value: 1 - 0.25, active: false, desc: "No gatherings with more than 100 people" }
-        this.gatherings_10 = { value: 1 - 0.35, active: false, desc: "No gatherings with more than 10 people" }
+        // this.gatherings_1000 = { value: 1 - 0.2, active: false, desc: "No gatherings with more than 1000 people" }
+        // this.gatherings_100 = { value: 1 - 0.25, active: false, desc: "No gatherings with more than 100 people" }
+        // this.gatherings_10 = { value: 1 - 0.35, active: false, desc: "No gatherings with more than 10 people" }
+        this.gatherings = { value: (1 - 0.2) * (1 - 0.25) * (1 - 0.35), active: false, desc: "Only small gatherings allowed" }
         this.schools_unis_closed = { value: 1 - 0.4, active: false, desc: "Schools and Universities are closed" }
         this.some_business_closed = { value: 1 - 0.2, active: false, desc: "Selected (high-traffic) buisnesses are closed" }
         this.all_business_closed = { value: 1 - 0.3, active: false, desc: "All non-essential buisnesses are closed" }
-        this.test_trace_isolate = { value: 1 - 0.33, active: false, desc: "Trace & isolate infected persons" }
         this.stay_at_home = { value: 1 - 0.1, active: false, desc: "Strict 'stay at home' orders" }
+        this.test_trace_isolate = { value: 1 - 0.33, active: false, desc: "Trace & isolate infected persons" }
         this.hard_ld_inc = { value: 1 - 0.9, active: false, desc: "Complete lockdown at incidence > 20" }
     }
 

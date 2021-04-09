@@ -1,13 +1,12 @@
 import {
   State,
-  step_state,
-  init_state_inc,
-  init_state_0
+  step_state
 } from './state-handling.js';
 import MapPlot from './map-plot';
 import "./sass/default.scss";
 import TimelineChart from './timeline-chart';
 import TimelineChartSelector from './timeline-chart-selector';
+import ScenarioSelector from './scenario-selector';
 
 //---- Controls ---------------------------------------------------------------------------------------------------------------
 var running = false;  // TODO: this should be in State
@@ -45,10 +44,12 @@ function clickResetButton() {
   running = false;
   updateRunButton();
   gState = new State();
-  init_state_0(gState, lk_data);
   timelineSelector.updateState(gState);
+  scenarioSelector.updateState(gState);
   mapPlot.state = gState;
+  scenarioSelector.initScenario(gState);
   renderState(gState)
+  console.log("Reset")
 }
 
 var resetButton = document.getElementById("reset");
@@ -85,6 +86,7 @@ function renderState(state) {
   mapPlot.update();
   updateProgressBar(state.step_no);
   // console.log("Rendered state", state);
+  console.log("Reset")
 }
 
 var gState = new State();
@@ -158,32 +160,38 @@ d3.queue()
 
 let timelineChart = null;
 let timelineSelector = null;
-let lk_data=null;
+let scenarioSelector = null;
 let mapPlot=null;
 
+function coreLoop(state) {
+  if (state.step_no > MAX_DAYS) { running = false; }
+  if (running) {
+    step_state(state);
+    renderState(state);
+  }
+
+  setTimeout(coreLoop, 300, gState); // This can't be state because we swap out the global gState for a new State on reset,
+  // and state would continue to reference the old global...
+};
+
 function start_sim(error, data) {
-  lk_data = data;
   // init_state_inc(gState, data);
-  init_state_0(gState, data);
+  // init_state_0(gState, data);
 
   // console.log("Initial State = ", gState);
-  mapPlot = new MapPlot($('#mapPlot')[0], gState.topo, gState);
-  mapPlot.draw();
-  console.log("done");
-
-  const updateLoop = (state) => {
-    if (state.step_no > MAX_DAYS) { running = false; }
-    if (running) {
-      step_state(state);
-      renderState(state);
-    }
-
-    setTimeout(updateLoop, 300, gState);
-  };
-  setTimeout(updateLoop, 300, gState);
 
   timelineChart = new TimelineChart($('#charts')[0], gState.country.I);
   timelineSelector = new TimelineChartSelector(
     $('#chart_selector')[0], gState, timelineChart
   );
+  scenarioSelector = new ScenarioSelector(
+    $('#scenario_selector')[0], gState, data, clickResetButton);
+
+  mapPlot = new MapPlot($('#mapPlot')[0], gState.topo, gState);
+  mapPlot.draw();
+  console.log("done");
+  
+  renderState(gState);
+
+  setTimeout(coreLoop, 300, gState);
 }

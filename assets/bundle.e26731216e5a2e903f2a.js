@@ -331,14 +331,15 @@ function one_person_timeline_average(dyn_pars, N) {
 class Measures {
     constructor() {
 
-        this.gatherings_1000 = { value: 1 - 0.2, active: false, desc: "No gatherings with more than 1000 people" }
-        this.gatherings_100 = { value: 1 - 0.25, active: false, desc: "No gatherings with more than 100 people" }
-        this.gatherings_10 = { value: 1 - 0.35, active: false, desc: "No gatherings with more than 10 people" }
+        // this.gatherings_1000 = { value: 1 - 0.2, active: false, desc: "No gatherings with more than 1000 people" }
+        // this.gatherings_100 = { value: 1 - 0.25, active: false, desc: "No gatherings with more than 100 people" }
+        // this.gatherings_10 = { value: 1 - 0.35, active: false, desc: "No gatherings with more than 10 people" }
+        this.gatherings = { value: (1 - 0.2) * (1 - 0.25) * (1 - 0.35), active: false, desc: "Only small gatherings allowed" }
         this.schools_unis_closed = { value: 1 - 0.4, active: false, desc: "Schools and Universities are closed" }
         this.some_business_closed = { value: 1 - 0.2, active: false, desc: "Selected (high-traffic) buisnesses are closed" }
         this.all_business_closed = { value: 1 - 0.3, active: false, desc: "All non-essential buisnesses are closed" }
-        this.test_trace_isolate = { value: 1 - 0.33, active: false, desc: "Trace & isolate infected persons" }
         this.stay_at_home = { value: 1 - 0.1, active: false, desc: "Strict 'stay at home' orders" }
+        this.test_trace_isolate = { value: 1 - 0.33, active: false, desc: "Trace & isolate infected persons" }
         this.hard_ld_inc = { value: 1 - 0.9, active: false, desc: "Complete lockdown at incidence > 20" }
     }
 
@@ -723,6 +724,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _sass_default_scss__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./sass/default.scss */ "./src/sass/default.scss");
 /* harmony import */ var _timeline_chart__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./timeline-chart */ "./src/timeline-chart.js");
 /* harmony import */ var _timeline_chart_selector__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./timeline-chart-selector */ "./src/timeline-chart-selector.js");
+/* harmony import */ var _scenario_selector__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./scenario-selector */ "./src/scenario-selector.js");
+
 
 
 
@@ -765,10 +768,12 @@ function clickResetButton() {
   running = false;
   updateRunButton();
   gState = new _state_handling_js__WEBPACK_IMPORTED_MODULE_0__.State();
-  (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.init_state_0)(gState, lk_data);
   timelineSelector.updateState(gState);
+  scenarioSelector.updateState(gState);
   mapPlot.state = gState;
+  scenarioSelector.initScenario(gState);
   renderState(gState)
+  console.log("Reset")
 }
 
 var resetButton = document.getElementById("reset");
@@ -805,6 +810,7 @@ function renderState(state) {
   mapPlot.update();
   updateProgressBar(state.step_no);
   // console.log("Rendered state", state);
+  console.log("Reset")
 }
 
 var gState = new _state_handling_js__WEBPACK_IMPORTED_MODULE_0__.State();
@@ -878,34 +884,40 @@ d3.queue()
 
 let timelineChart = null;
 let timelineSelector = null;
-let lk_data=null;
+let scenarioSelector = null;
 let mapPlot=null;
 
+function coreLoop(state) {
+  if (state.step_no > MAX_DAYS) { running = false; }
+  if (running) {
+    (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.step_state)(state);
+    renderState(state);
+  }
+
+  setTimeout(coreLoop, 300, gState); // This can't be state because we swap out the global gState for a new State on reset,
+  // and state would continue to reference the old global...
+};
+
 function start_sim(error, data) {
-  lk_data = data;
   // init_state_inc(gState, data);
-  (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.init_state_0)(gState, data);
+  // init_state_0(gState, data);
 
   // console.log("Initial State = ", gState);
-  mapPlot = new _map_plot__WEBPACK_IMPORTED_MODULE_1__.default($('#mapPlot')[0], gState.topo, gState);
-  mapPlot.draw();
-  console.log("done");
-
-  const updateLoop = (state) => {
-    if (state.step_no > MAX_DAYS) { running = false; }
-    if (running) {
-      (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.step_state)(state);
-      renderState(state);
-    }
-
-    setTimeout(updateLoop, 300, gState);
-  };
-  setTimeout(updateLoop, 300, gState);
 
   timelineChart = new _timeline_chart__WEBPACK_IMPORTED_MODULE_3__.default($('#charts')[0], gState.country.I);
   timelineSelector = new _timeline_chart_selector__WEBPACK_IMPORTED_MODULE_4__.default(
     $('#chart_selector')[0], gState, timelineChart
   );
+  scenarioSelector = new _scenario_selector__WEBPACK_IMPORTED_MODULE_5__.default(
+    $('#scenario_selector')[0], gState, data, clickResetButton);
+
+  mapPlot = new _map_plot__WEBPACK_IMPORTED_MODULE_1__.default($('#mapPlot')[0], gState.topo, gState);
+  mapPlot.draw();
+  console.log("done");
+  
+  renderState(gState);
+
+  setTimeout(coreLoop, 300, gState);
 }
 
 
@@ -989,7 +1001,7 @@ class MapPlot {
         let cr = this.state.regions.find(e => e.tag == ctag);
         if (Array.isArray(cr[this.variable])) {
           return cr[this.variable].length > 0 ?
-            this.colorScale(cr[this.variable][cr[this.variable].length - 1]) :
+            this.colorScale(cr[this.variable][this.state.step_no]) :
             0;
         } else {
           return this.colorScale(cr[this.variable]);
@@ -1045,6 +1057,65 @@ MapPlot.defaultScale = [5, 25, 50, 100, 150, 200, 300, 400];
 
 /***/ }),
 
+/***/ "./src/scenario-selector.js":
+/*!**********************************!*\
+  !*** ./src/scenario-selector.js ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ ScenarioSelector)
+/* harmony export */ });
+/* harmony import */ var _state_handling_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./state-handling.js */ "./src/state-handling.js");
+
+
+class ScenarioSelector {
+  constructor(container, state, data, reseter) {
+    this.container = container;
+    this.data = data;
+
+    this.initOptions(state);
+
+    this.$select = $('<select class="form-control form-control-sm"></select>')
+      .appendTo(this.container)
+      .on('change', reseter.bind(this))
+      .append(this.options.map((option, i) => {
+        return $('<option></option>')
+          .text(option.label)
+          .attr('value', i + 1);
+      }));
+    
+    this.initScenario()
+  }
+
+  initOptions(state) {
+    this.state = state;
+    this.options = [
+      {
+        label: 'Incidence 22.2.',
+        init: _state_handling_js__WEBPACK_IMPORTED_MODULE_0__.init_state_inc,
+      },
+      {
+        label: 'Incidence 0.',
+        init: _state_handling_js__WEBPACK_IMPORTED_MODULE_0__.init_state_0,
+      }
+    ];
+
+  }
+
+  updateState(state) {
+    this.initOptions(state);
+  }
+
+  initScenario() {
+    this.options[this.$select.val() - 1].init(this.state, this.data);
+  }
+}
+
+
+/***/ }),
+
 /***/ "./src/state-handling.js":
 /*!*******************************!*\
   !*** ./src/state-handling.js ***!
@@ -1074,11 +1145,13 @@ class State {
     this.regions = [];
     this.measures = new _game_engine__WEBPACK_IMPORTED_MODULE_0__.Measures();
     this.covid_pars = new _game_engine__WEBPACK_IMPORTED_MODULE_0__.DynParameters();
-    this.step_no = 0;
+    this.step_no = 0; // now
     this.country = new _game_engine__WEBPACK_IMPORTED_MODULE_0__.Country();
     this.events = []
+    this.messages = []
     this.topo = []
     this.scenario_max_length = 200
+    this.start_no = 0; // scenario_start
   }
 }
 
@@ -1143,7 +1216,7 @@ function init_state_random(gState, events){
 
 function step_state(state) {
   for (let e of state.events) {
-    if (e.trigger(state)) {e.action_on(state)}
+    if (e.trigger(state)) {e.action_on(state); state.messages.push(e.news_item)}
   }
   // if (state.step_no < state.scenario_max_length) // Take this out for now, as it overlaps with MAX_DAYS handling in main.js
   state.step_no++;
@@ -1449,4 +1522,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.909cae5314a08e11efdf.js.map
+//# sourceMappingURL=bundle.e26731216e5a2e903f2a.js.map
