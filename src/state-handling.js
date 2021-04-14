@@ -47,9 +47,13 @@ export function init_state_inc(gState, data) {
     });
   });
 
-  for (let i = 0; i < 4; i++) {
+  gState.start_no = 7
+
+  for (let i = 0; i < gState.start_no; i++) {
     none_step_epidemic(gState.country, gState.regions, gState.measures, gState.covid_pars);
   }
+
+
 
   gState.topo = data;
   gState.country.total = count((reg) => reg.total, gState.regions)
