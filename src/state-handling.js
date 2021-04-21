@@ -25,7 +25,8 @@ export class State {
     this.messages = []
     this.topo = []
     this.scenario_max_length = 200
-    this.start_no = 0; // scenario_start
+    this.start_no = 7; // scenario_start
+
   }
 }
 

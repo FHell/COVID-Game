@@ -25,22 +25,29 @@ export default class MapPlot {
       .translate([this.width / 2, this.height / 2]);
 
     this.variable = MapPlot.defaultVariable;
-    this.setScale(MapPlot.defaultScale);
+    this.setScale(MapPlot.defaultScale,MapPlot.defaultColorScheme);
   }
 
-  setScale(scale) {
+  setScale(scale, colorScheme) {
     this.scale = scale;
-    this.colorScale = d3.scaleThreshold()
+    if (colorScheme == 'OrRd') {
+      this.colorScale = d3.scaleThreshold()
       .domain(this.scale)
       .range(d3.schemeOrRd[this.scale.length + 1]);
+    }
+    else if (colorScheme == 'YlGn'){
+      this.colorScale = d3.scaleThreshold()
+      .domain(this.scale)
+      .range(d3.schemeYlGn[this.scale.length + 1]);
+    }
   }
 
   setVariable(variable) {
     this.variable = variable;
     if (MapPlot.variables[variable].scale) {
-      this.setScale(MapPlot.variables[variable].scale);
+      this.setScale(MapPlot.variables[variable].scale, MapPlot.variables[variable].colorScheme);
     } else {
-      this.setScale(MapPlot.defaultScale);
+      this.setScale(MapPlot.defaultScale,MapPlot.defaultColorScheme);
     }
     this.update();
   }
@@ -78,22 +85,29 @@ export default class MapPlot {
 MapPlot.variables = {
   seven_d_incidence: {
     name: '7-day incidence',
+    scale: [5, 25, 50, 100, 150, 200, 300, 400],
+    colorScheme: 'OrRd',
   },
   seven_d_incidence_velocity: {
     name: '7-day incidence velocity',
+    scale: [0, .2, .5, .75, 1, 3, 10, 20],
+    colorScheme: 'OrRd',
   },
   local_tti: {
     name: 'Track and trace incidence',
     scale: [0, 0.1, 0.2, 0.4, 0.6, 0.8, 0.9, 1],
+    colorScheme: 'YlGn',
   },
   cumulative_deaths: {
     name: 'Cumulative deaths',
+    colorScheme: 'OrRd',
   }
 };
 
 MapPlot.defaultVariable = 'seven_d_incidence';
 
 MapPlot.defaultScale = [5, 25, 50, 100, 150, 200, 300, 400];
+MapPlot.defaultColorScheme = 'OrRd';
 
 // function createElementFromHTML(html) {
 //   let div = document.createElement('div');

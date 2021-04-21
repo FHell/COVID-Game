@@ -960,22 +960,29 @@ class MapPlot {
       .translate([this.width / 2, this.height / 2]);
 
     this.variable = MapPlot.defaultVariable;
-    this.setScale(MapPlot.defaultScale);
+    this.setScale(MapPlot.defaultScale,MapPlot.defaultColorScheme);
   }
 
-  setScale(scale) {
+  setScale(scale, colorScheme) {
     this.scale = scale;
-    this.colorScale = d3.scaleThreshold()
+    if (colorScheme == 'OrRd') {
+      this.colorScale = d3.scaleThreshold()
       .domain(this.scale)
       .range(d3.schemeOrRd[this.scale.length + 1]);
+    }
+    else if (colorScheme == 'YlGn'){
+      this.colorScale = d3.scaleThreshold()
+      .domain(this.scale)
+      .range(d3.schemeYlGn[this.scale.length + 1]);
+    }
   }
 
   setVariable(variable) {
     this.variable = variable;
     if (MapPlot.variables[variable].scale) {
-      this.setScale(MapPlot.variables[variable].scale);
+      this.setScale(MapPlot.variables[variable].scale, MapPlot.variables[variable].colorScheme);
     } else {
-      this.setScale(MapPlot.defaultScale);
+      this.setScale(MapPlot.defaultScale,MapPlot.defaultColorScheme);
     }
     this.update();
   }
@@ -1013,22 +1020,29 @@ class MapPlot {
 MapPlot.variables = {
   seven_d_incidence: {
     name: '7-day incidence',
+    scale: [5, 25, 50, 100, 150, 200, 300, 400],
+    colorScheme: 'OrRd',
   },
   seven_d_incidence_velocity: {
     name: '7-day incidence velocity',
+    scale: [0, .2, .5, .75, 1, 3, 10, 20],
+    colorScheme: 'OrRd',
   },
   local_tti: {
     name: 'Track and trace incidence',
     scale: [0, 0.1, 0.2, 0.4, 0.6, 0.8, 0.9, 1],
+    colorScheme: 'YlGn',
   },
   cumulative_deaths: {
     name: 'Cumulative deaths',
+    colorScheme: 'OrRd',
   }
 };
 
 MapPlot.defaultVariable = 'seven_d_incidence';
 
 MapPlot.defaultScale = [5, 25, 50, 100, 150, 200, 300, 400];
+MapPlot.defaultColorScheme = 'OrRd';
 
 // function createElementFromHTML(html) {
 //   let div = document.createElement('div');
@@ -1151,7 +1165,8 @@ class State {
     this.messages = []
     this.topo = []
     this.scenario_max_length = 200
-    this.start_no = 0; // scenario_start
+    this.start_no = 7; // scenario_start
+
   }
 }
 
@@ -1272,6 +1287,7 @@ function self_test() {
 
 // self_test();
 
+
 /***/ }),
 
 /***/ "./src/timeline-chart-selector.js":
@@ -1308,29 +1324,59 @@ class TimelineChartSelector {
       {
         label: 'Infections',
         data: [state.country.I],
+        properties:
+        {
+          start_drawing: state.step_no,
+          y_max: 400,
+        }
       },
       {
         label: 'Infections (cumulative)',
         data: [state.country.cumulative_infections],
+        properties:
+        {
+          start_drawing: state.step_no,
+          y_max: 400,
+        }
       },
       {
         label: 'Infections (cumulative, per strain)',
         data: [
           state.country.cumulative_infections_original_only,
           state.country.cumulative_infections_mutation_only,
-        ]
+        ],
+        properties:
+        {
+          start_drawing: state.step_no,
+          y_max: 400,
+        }
       },
       {
         label: 'Deaths',
         data: [state.country.deaths],
+        properties:
+        {
+          start_drawing: state.step_no,
+          y_max: 10,
+        }
       },
       {
         label: 'Deaths (cumulative)',
         data: [state.country.cumulative_deaths],
+        properties:
+        {
+          start_drawing: state.step_no,
+          y_max: 10,
+        }
       },
       {
         label: '7-day average incidence',
         data: [state.country.seven_d_incidence],
+        properties:
+        {
+          start_drawing: state.start_no,
+          y_max: 10,
+        }
       },
     ];
 
@@ -1345,6 +1391,7 @@ class TimelineChartSelector {
     this.timelineChart.setData(
       this.options[this.$select.val() - 1].data
     );
+    this.timelineChart.setProperties(this.options[this.$select.val() - 1].properties)
   }
 }
 
@@ -1460,6 +1507,14 @@ class TimelineChart {
     }
     this.chart.update();
   }
+
+
+  setProperties(properties) {
+    this.chart.options.scales.xAxes[0].ticks.min = properties.start_drawing;
+    this.chart.options.scales.yAxes[0].ticks.suggestedMax = properties.y_max;
+    this.chart.update()
+  }
+
 }
 
 
@@ -1526,4 +1581,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.02819393e46ff06c7849.js.map
+//# sourceMappingURL=bundle.423273792bb2835b9721.js.map
