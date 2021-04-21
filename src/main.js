@@ -93,6 +93,23 @@ var gState = new State();
 
 function initMeasures() {
   let cm = document.getElementById("countermeasures");
+
+  const $lockdownLvSlider = $('<input type="range" class="form-control-range mb-2">')
+    .attr({
+      value: 0,
+      min: 0,
+      max: 5,
+      step: 1
+    })
+    .appendTo(cm);
+
+  const $lockdownLvLegend = $('<div class="mb-4">')
+    .appendTo(cm);
+
+  $lockdownLvSlider.on('change', () => {
+    $lockdownLvLegend.text(`Level ${$lockdownLvSlider.val()}`);
+  }).change();
+
   Object.entries(gState.measures).forEach((e, i) => {
     const toggle = document.createElement('input');
     toggle.setAttribute('type', 'checkbox');
@@ -190,7 +207,7 @@ function start_sim(error, data) {
   mapPlot = new MapPlot($('#mapPlot')[0], gState.topo, gState);
   mapPlot.draw();
   console.log("done");
-  
+
   renderState(gState);
 
   setTimeout(coreLoop, 300, gState);
