@@ -1094,7 +1094,7 @@ class State {
     this.messages = []
     this.topo = []
     this.scenario_max_length = 200
-    this.start_no = 0;
+    this.start_no = 7;
   }
 }
 
@@ -1247,29 +1247,59 @@ class TimelineChartSelector {
       {
         label: 'Infections',
         data: [state.country.I],
+        properties:
+        {
+          start_drawing: state.step_no,
+          y_max: 400,
+        }
       },
       {
         label: 'Infections (cumulative)',
         data: [state.country.cumulative_infections],
+        properties:
+        {
+          start_drawing: state.step_no,
+          y_max: 400,
+        }
       },
       {
         label: 'Infections (cumulative, per strain)',
         data: [
           state.country.cumulative_infections_original_only,
           state.country.cumulative_infections_mutation_only,
-        ]
+        ],
+        properties:
+        {
+          start_drawing: state.step_no,
+          y_max: 400,
+        }
       },
       {
         label: 'Deaths',
         data: [state.country.deaths],
+        properties:
+        {
+          start_drawing: state.step_no,
+          y_max: 10,
+        }
       },
       {
         label: 'Deaths (cumulative)',
         data: [state.country.cumulative_deaths],
+        properties:
+        {
+          start_drawing: state.step_no,
+          y_max: 10,
+        }
       },
       {
         label: '7-day average incidence',
         data: [state.country.seven_d_incidence],
+        properties:
+        {
+          start_drawing: state.start_no,
+          y_max: 10,
+        }
       },
     ];
 
@@ -1284,6 +1314,7 @@ class TimelineChartSelector {
     this.timelineChart.setData(
       this.options[this.$select.val() - 1].data
     );
+    this.timelineChart.setProperties(this.options[this.$select.val() - 1].properties)
   }
 }
 
@@ -1399,6 +1430,14 @@ class TimelineChart {
     }
     this.chart.update();
   }
+
+
+  setProperties(properties) {
+    this.chart.options.scales.xAxes[0].ticks.min = properties.start_drawing;
+    this.chart.options.scales.yAxes[0].ticks.suggestedMax = properties.y_max;
+    this.chart.update()
+  }
+
 }
 
 
@@ -1465,4 +1504,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.c76db421c2254e5d9657.js.map
+//# sourceMappingURL=bundle.003454de4a8b9b55ed3a.js.map

@@ -22,29 +22,59 @@ export default class TimelineChartSelector {
       {
         label: 'Infections',
         data: [state.country.I],
+        properties:
+        {
+          start_drawing: state.step_no,
+          y_max: 400,
+        }
       },
       {
         label: 'Infections (cumulative)',
         data: [state.country.cumulative_infections],
+        properties:
+        {
+          start_drawing: state.step_no,
+          y_max: 400,
+        }
       },
       {
         label: 'Infections (cumulative, per strain)',
         data: [
           state.country.cumulative_infections_original_only,
           state.country.cumulative_infections_mutation_only,
-        ]
+        ],
+        properties:
+        {
+          start_drawing: state.step_no,
+          y_max: 400,
+        }
       },
       {
         label: 'Deaths',
         data: [state.country.deaths],
+        properties:
+        {
+          start_drawing: state.step_no,
+          y_max: 10,
+        }
       },
       {
         label: 'Deaths (cumulative)',
         data: [state.country.cumulative_deaths],
+        properties:
+        {
+          start_drawing: state.step_no,
+          y_max: 10,
+        }
       },
       {
         label: '7-day average incidence',
         data: [state.country.seven_d_incidence],
+        properties:
+        {
+          start_drawing: state.start_no,
+          y_max: 10,
+        }
       },
     ];
 
@@ -59,5 +89,6 @@ export default class TimelineChartSelector {
     this.timelineChart.setData(
       this.options[this.$select.val() - 1].data
     );
+    this.timelineChart.setProperties(this.options[this.$select.val() - 1].properties)
   }
 }

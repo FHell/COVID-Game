@@ -97,4 +97,12 @@ export default class TimelineChart {
     }
     this.chart.update();
   }
+
+
+  setProperties(properties) {
+    this.chart.options.scales.xAxes[0].ticks.min = properties.start_drawing;
+    this.chart.options.scales.yAxes[0].ticks.suggestedMax = properties.y_max;
+    this.chart.update()
+  }
+
 }
