@@ -26,7 +26,10 @@ export class Country {
         this.cumulative_infections_mutation_only = [0] // Plot this
         this.cumulative_infections_original_only = [0] // Plot this
         this.cumulative_deaths = [0] // Plot this
+        this.cumulative_impact = [0] // Plot this
         this.seven_d_incidence = [0] // Plot this
+        this.seven_d_incidence_mut = [0] // Plot this
+        this.seven_d_incidence_ori = [0] // Plot this
         this.global_tti = 0. // Give a gauge showing this.
     }
 }
@@ -56,6 +59,7 @@ class Region {
         this.seven_d_incidence_velocity = [0] // Map this
         this.local_tti = 0. // Map this
         this.cumulative_deaths = [0] // Map this
+        this.cumulative_impact = [0] // Map this
     }
 }
 
@@ -296,16 +300,23 @@ function one_person_timeline_average(dyn_pars, N) {
 export class Measures {
     constructor() {
 
+        this.meas = [
+            { value: 1, impact: 0., desc: "No restrictions" },
+            { value: 1 - 0.1, impact: 0.1, desc: "Mild restrictions" },
+            { value: 1 - 0.2, impact: 0.2, desc: "Medium restrictions" },
+            { value: 1 - 0.6, impact: 0.6, desc: "Strong restrictions" },
+            { value: 1 - 0.9, impact: 1., desc: "Hard Lockdown" }]
+        this.meas_lvl = 0
         // this.gatherings_1000 = { value: 1 - 0.2, active: false, desc: "No gatherings with more than 1000 people" }
         // this.gatherings_100 = { value: 1 - 0.25, active: false, desc: "No gatherings with more than 100 people" }
         // this.gatherings_10 = { value: 1 - 0.35, active: false, desc: "No gatherings with more than 10 people" }
-        this.gatherings = { value: (1 - 0.2) * (1 - 0.25) * (1 - 0.35), active: false, desc: "Only small gatherings allowed" }
-        this.schools_unis_closed = { value: 1 - 0.4, active: false, desc: "Schools and Universities are closed" }
-        this.some_business_closed = { value: 1 - 0.2, active: false, desc: "Selected (high-traffic) buisnesses are closed" }
-        this.all_business_closed = { value: 1 - 0.3, active: false, desc: "All non-essential buisnesses are closed" }
-        this.stay_at_home = { value: 1 - 0.1, active: false, desc: "Strict 'stay at home' orders" }
-        this.test_trace_isolate = { value: 1 - 0.33, active: false, desc: "Trace & isolate infected persons" }
-        this.hard_ld_inc = { value: 1 - 0.9, active: false, desc: "Complete lockdown at incidence > 20" }
+        // this.gatherings = { value: (1 - 0.2) * (1 - 0.25) * (1 - 0.35), active: false, desc: "Only small gatherings allowed" }
+        // this.schools_unis_closed = { value: 1 - 0.4, active: false, desc: "Schools and Universities are closed" }
+        // this.some_business_closed = { value: 1 - 0.2, active: false, desc: "Selected (high-traffic) buisnesses are closed" }
+        // this.all_business_closed = { value: 1 - 0.3, active: false, desc: "All non-essential buisnesses are closed" }
+        // this.stay_at_home = { value: 1 - 0.1, active: false, desc: "Strict 'stay at home' orders" }
+        this.test_trace_isolate = { value: 1 - 0.33, active: false, desc: "Trace & isolate infected persons", render: true}
+        this.hard_ld_inc = { value: 1 - 0.9, active: false, impact: 1., desc: "Hard Lockdown at incidence > 20", render: true}
     }
 
     toggle(key) {
@@ -314,10 +325,14 @@ export class Measures {
 }
 
 function measure_effect(cm) {
+    // Dramatically simplified measures:
+    return cm.meas[cm.meas_lvl].value
+
     // This is how I interpret the slide. Might or might not be true:
-    let mu_mult = 1.
-    Object.keys(cm).filter(m => cm[m].active && m != "test_trace_isolate" && m != "hard_ld_inc").map(m => { mu_mult *= cm[m].value })
-    return mu_mult
+
+    // let mu_mult = 1.
+    // Object.keys(cm).filter(m => cm[m].active && m != "test_trace_isolate" && m != "hard_ld_inc").map(m => { mu_mult *= cm[m].value })
+    // return mu_mult
 }
 
 function tti_eff(infected, trace_capacity, cm) {
@@ -341,11 +356,15 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
 
     let local_mu = s_adjust * mu_mult * dyn_pars.mu.value
     let local_mu_m = s_adjust * mu_mult * dyn_pars.mu_m.value
+    let local_impact = cm.meas[cm.meas_lvl].impact
 
     if (cm.hard_ld_inc.active && reg.seven_d_incidence[now] > 20) {
         local_mu = s_adjust * cm.hard_ld_inc.value * dyn_pars.mu.value
         local_mu_m = s_adjust * cm.hard_ld_inc.value * dyn_pars.mu_m.value
+        local_impact = cm.hard_ld_inc.impact
     }
+
+    reg.cumulative_impact.push
 
     if (cm.test_trace_isolate.active) {
         const te = tti_eff(reg.I[now] + reg.Im[now], dyn_pars.tti_capacity.value * reg.total, cm)
@@ -394,13 +413,15 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
     if (now > 0) {
         reg.seven_d_incidence_velocity.push(reg.seven_d_incidence[now + 1] - reg.seven_d_incidence[now])
         reg.cumulative_deaths.push(reg.cumulative_deaths[now] + d)
+        reg.cumulative_impact.push(reg.cumulative_impact[now] + local_impact)
     }
     else {
         reg.seven_d_incidence_velocity.push(0)
         reg.cumulative_deaths.push(d)
+        reg.cumulative_impact.push(local_impact)
     }
 
-    return [d, delta_E, delta_Em]
+    return [d, delta_E, delta_Em, local_impact]
 }
 
 
@@ -432,6 +453,7 @@ export function step_epidemic(country, regions, cm, dyn_pars, travel) {
 
     let mu_mult = measure_effect(cm)
     let d = 0
+    let impact = 0
     let delta_E = 0
     let delta_Em = 0
 
@@ -441,6 +463,7 @@ export function step_epidemic(country, regions, cm, dyn_pars, travel) {
         d += ls[0]
         delta_E += ls[1]
         delta_Em += ls[2]
+        impact += reg.total * ls[3]
     }
 
     // Push to the data arrays.
@@ -460,6 +483,7 @@ export function step_epidemic(country, regions, cm, dyn_pars, travel) {
     country.cumulative_infections_mutation_only.push(country.cumulative_infections_mutation_only[now] + delta_Em)
     country.cumulative_infections_original_only.push(country.cumulative_infections_original_only[now] + delta_E)
     country.cumulative_deaths.push(country.cumulative_deaths[now] + d)
+    country.cumulative_impact.push(country.cumulative_impact[now] + impact / country.total)
     country.seven_d_incidence.push(avg7_incidence(country))
     country.global_tti = tti_global_effectiveness(regions, dyn_pars, cm)
     // debug output

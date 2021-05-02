@@ -98,7 +98,7 @@ function initMeasures() {
     .attr({
       value: 0,
       min: 0,
-      max: 5,
+      max: 4,
       step: 1
     })
     .appendTo(cm);
@@ -108,9 +108,12 @@ function initMeasures() {
 
   $lockdownLvSlider.on('change', () => {
     $lockdownLvLegend.text(`Level ${$lockdownLvSlider.val()}`);
+    if (gState == null) { return; }
+    gState.measures.meas_lvl = $lockdownLvSlider.val();  
+    $lockdownLvLegend.text(gState.measures.meas[gState.measures.meas_lvl].desc);
   }).change();
 
-  Object.entries(gState.measures).forEach((e, i) => {
+  Object.entries(gState.measures).filter((m) => {console.log(m[1]); console.log(m[1].render); return m[1].render == true}).forEach((e, i) => {
     const toggle = document.createElement('input');
     toggle.setAttribute('type', 'checkbox');
     toggle.setAttribute('id', `m${i}`);
