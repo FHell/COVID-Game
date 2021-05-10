@@ -904,9 +904,9 @@ function initParams() {
     const $field = $('<input class="form-control form-control-sm">')
       .attr('type', 'number')
       .attr('id', `p${i}`)
-      .attr('step', '0.1')
-      .attr('min', 0)
-      .attr('max', e[1].def * 2)
+      .attr('step', 0.1)
+      .attr('min', 0.)
+      .attr('max', 100.)
       .on('change', () => { changeParams(e[0], $field.val()); })
       .val(e[1].value)
       .appendTo($('<td></td>').appendTo($container));
@@ -1414,6 +1414,15 @@ class TimelineChartSelector {
         }
       },
       {
+        label: 'Effective lockdown days (cumulative)',
+        data: [state.country.cumulative_impact],
+        properties:
+        {
+          start_drawing: state.step_no,
+          y_max: 10,
+        }
+      },
+      {
         label: '7-day average incidence',
         data: [state.country.seven_d_incidence],
         properties:
@@ -1625,4 +1634,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.4e2ba2a53a76fcff5540.js.map
+//# sourceMappingURL=bundle.faac8739dfa7c7f0fc34.js.map

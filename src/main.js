@@ -156,9 +156,9 @@ function initParams() {
     const $field = $('<input class="form-control form-control-sm">')
       .attr('type', 'number')
       .attr('id', `p${i}`)
-      .attr('step', '0.1')
-      .attr('min', 0)
-      .attr('max', e[1].def * 2)
+      .attr('step', 0.1)
+      .attr('min', 0.)
+      .attr('max', 100.)
       .on('change', () => { changeParams(e[0], $field.val()); })
       .val(e[1].value)
       .appendTo($('<td></td>').appendTo($container));

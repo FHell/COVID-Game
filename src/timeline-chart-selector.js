@@ -68,6 +68,15 @@ export default class TimelineChartSelector {
         }
       },
       {
+        label: 'Effective lockdown days (cumulative)',
+        data: [state.country.cumulative_impact],
+        properties:
+        {
+          start_drawing: state.step_no,
+          y_max: 10,
+        }
+      },
+      {
         label: '7-day average incidence',
         data: [state.country.seven_d_incidence],
         properties:
