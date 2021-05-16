@@ -137,13 +137,13 @@ class DynParameters {
 
         // Disease dynamics
         this.mu = { value: 3, def: 3, desc: "Base R0: Number of people an infected infects on average." }
-        this.mu_m = { value: 4, def: 4, desc: "Base R0 for Mutant: Number of people someone infected by the mutant infects on average." }
+        this.mu_m = { value: 4.5, def: 4.5, desc: "Base R0 for Mutant: Number of people someone infected by the mutant infects on average." }
         this.I_to_R = { value: 0.2, def: 0.2, desc: "Daily rate of end of infectiousness (leading to recovery or death)." }
         this.E_to_I = { value: 0.4, def: 0.4, desc: "Daily rate of infection breaking out among those carrying the virus (they become infectious for others)." }
         this.k = { value: 0.1, def: 0.1, desc: "Overdispersion: Not everyone infects exactly R0 people, this parameter controls how much the number of infected varies from person to person." }
-        this.vac_rate = { value: 0.001, def: 0.001, desc: "Fraction of population vaccinated per day." }
+        this.vac_rate = { value: 0., def: 0., desc: "Fraction of population vaccinated per day." }
         this.vac_eff = { value: 0.8, def: 0.8, desc: "Fraction of infections prevented by vaccination." }
-        this.tti_capacity = { value: 0.0001, def: 0.0001, desc: "Trace capacity as fraction of total local population." }
+        this.tti_capacity = { value: 0.0002, def: 0.0002, desc: "Trace capacity as fraction of total local population." }
         this.bck_rate = { value: 0.5, def: 0.5, desc: "Average number of infected coming into each region per day from outside the country." }
         this.bck_rate_m = { value: 0., def: 0., desc: "Average number of mutant infected coming into each region per day from outside the country." }
 
@@ -337,9 +337,9 @@ class Measures {
 
         this.meas = [
             { value: 1, impact: 0., desc: "No restrictions" },
-            { value: 1 - 0.1, impact: 0.1, desc: "Mild restrictions" },
-            { value: 1 - 0.2, impact: 0.2, desc: "Medium restrictions" },
-            { value: 1 - 0.6, impact: 0.6, desc: "Strong restrictions" },
+            { value: 1 - 0.1, impact: 0.01, desc: "Mild restrictions" },
+            { value: 1 - 0.2, impact: 0.1, desc: "Medium restrictions" },
+            { value: 1 - 0.6, impact: 0.5, desc: "Strong restrictions" },
             { value: 1 - 0.9, impact: 1., desc: "Hard Lockdown" }]
         this.meas_lvl = 0
         // this.gatherings_1000 = { value: 1 - 0.2, active: false, desc: "No gatherings with more than 1000 people" }
@@ -758,7 +758,7 @@ __webpack_require__.r(__webpack_exports__);
 
 //---- Controls ---------------------------------------------------------------------------------------------------------------
 var running = false;  // TODO: this should be in State
-const MAX_DAYS = 200;
+// const MAX_DAYS = 200;
 var runner = document.getElementById("run");
 var tti_dial = document.getElementById("tti_dial");
 var hosp_dial = document.getElementById("hosp_dial");
@@ -766,9 +766,13 @@ var vac_dial = document.getElementById("vac_dial");
 
 function updateDials(state){
   tti_dial.innerHTML = state.country.global_tti
-  hosp_dial.innerHTML = "0" // let hos = N_total * dyn_pars.hospital_capacity.value / ((1 - v_rate) * I)
+  hosp_dial.innerHTML = "NA" // let hos = N_total * dyn_pars.hospital_capacity.value / ((1 - v_rate) * I)
   vac_dial.innerHTML = state.country.ratio_vac
 }
+
+
+var reseter = document.getElementById("reset");
+reseter.innerHTML = "[Reset]"
 
 const RunButtonContents = {
   PAUSED: "<i class='icon ic-run'></i> Run the simulation",
@@ -809,7 +813,7 @@ var forward = document.getElementById("forward");
 forward.innerHTML = "[Forward]"
 function clickForwardButton() {
   running = false;
-  while (gState.step_no < MAX_DAYS) {
+  while (gState.step_no < gState.scenario_max_length) {
       (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.step_state)(gState);
       updateProgressBar(gState.step_no);
     }
@@ -825,7 +829,7 @@ forwardButton.addEventListener('click', clickForwardButton);
 
 function updateProgressBar(day) {
   $('#gameProgressDay').html(`${day} ${day === 1 ? 'day' : 'days'}`);
-  $('#gameProgress .progress-bar').css('width', `${(day / MAX_DAYS) * 100}%`);
+  $('#gameProgress .progress-bar').css('width', `${(day / gState.scenario_max_length) * 100}%`);
 }
 
 function renderState(state) {
@@ -833,8 +837,9 @@ function renderState(state) {
   timelineChart.update();
   mapPlot.update();
   updateProgressBar(state.step_no);
+  updateMeas(state);
+  // TODO!! Match measure toggle to measure state
   // console.log("Rendered state", state);
-  console.log("Reset")
 }
 
 var gState = new _state_handling_js__WEBPACK_IMPORTED_MODULE_0__.State();
@@ -847,7 +852,8 @@ function initMeasures() {
       value: 0,
       min: 0,
       max: 4,
-      step: 1
+      step: 1,
+      id: 'slider'
     })
     .appendTo(cm);
 
@@ -881,6 +887,18 @@ function initMeasures() {
   });
 }
 initMeasures();
+
+
+var slider = document.getElementById("slider");
+var m0 = document.getElementById("m0");
+var m1 = document.getElementById("m1");
+
+function updateMeas(state){
+  slider.value = state.measures.meas_lvl
+  slider.text = state.measures.meas[state.measures.meas_lvl].desc
+  m0.checked = state.measures.test_trace_isolate.active
+  m1.checked = state.measures.hard_ld_inc.active
+}
 
 function toggleMeasure(cb) {
   if (gState == null) { return; }
@@ -932,7 +950,7 @@ let scenarioSelector = null;
 let mapPlot=null;
 
 function coreLoop(state) {
-  if (state.step_no > MAX_DAYS) { running = false; }
+  if (state.step_no > gState.scenario_max_length) { running = false; }
   if (running) {
     (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.step_state)(state);
     renderState(state);
@@ -1151,6 +1169,10 @@ class ScenarioSelector {
     this.state = state;
     this.options = [
       {
+        label: 'Two years of covid',
+        init: _state_handling_js__WEBPACK_IMPORTED_MODULE_0__.init_state_2y,
+      },
+      {
         label: 'Incidence 22.2.',
         init: _state_handling_js__WEBPACK_IMPORTED_MODULE_0__.init_state_inc,
       },
@@ -1185,10 +1207,14 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "State": () => (/* binding */ State),
 /* harmony export */   "init_state_inc": () => (/* binding */ init_state_inc),
 /* harmony export */   "init_state_0": () => (/* binding */ init_state_0),
+/* harmony export */   "init_state_2y": () => (/* binding */ init_state_2y),
 /* harmony export */   "init_state_random": () => (/* binding */ init_state_random),
 /* harmony export */   "step_state": () => (/* binding */ step_state),
 /* harmony export */   "simulate_full_scenario": () => (/* binding */ simulate_full_scenario),
 /* harmony export */   "DynParEvent": () => (/* binding */ DynParEvent),
+/* harmony export */   "ToggleHL20Event": () => (/* binding */ ToggleHL20Event),
+/* harmony export */   "ToggleTTIEvent": () => (/* binding */ ToggleTTIEvent),
+/* harmony export */   "SetCMLevelEvent": () => (/* binding */ SetCMLevelEvent),
 /* harmony export */   "log_state": () => (/* binding */ log_state)
 /* harmony export */ });
 /* harmony import */ var _game_engine__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./game-engine */ "./src/game-engine.js");
@@ -1264,6 +1290,41 @@ function init_state_0(gState, data) {
   gState.country.total = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.count)((reg) => reg.total, gState.regions)
 }
 
+// Inital state for 2 years of Covid
+
+function init_state_2y(gState, data) {
+  data.features.forEach(e => {
+    let r = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.region_with_incidence)(e.properties.EWZ, 0, e.properties.AGS, e.properties.GEN)
+    // for distance between regions
+    // two passes to prevent expensive recalculation
+    r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
+    gState.regions.push(r);
+  });
+
+  // second pass ... finish up distance calculations
+  gState.regions.forEach((src_r) => {
+    gState.regions.forEach((dst_r, i) => {
+      src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
+    });
+  });
+
+  gState.topo = data;
+  gState.country.total = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.count)((reg) => reg.total, gState.regions);
+
+  gState.scenario_max_length = 365 * 2;
+  gState.start_no = 0;
+
+
+  gState.events = [
+    new ToggleTTIEvent(15, "Starting Test Trace and Isolate Program."),
+    new SetCMLevelEvent(20, 3, "Taking some counter measures."),
+    new ToggleHL20Event(50, "Hard lockdown for >20 in effect."),
+    new DynParEvent(365, "bck_rate_m", 5., "January 1st, B.1.1.7 mutation appears among travelers coming into Germany."),
+    new DynParEvent(380, "vac_rate", 0.001, "Vaccinations starting slowly."),
+    new SetCMLevelEvent(400, 4, "Increasing counter measures."),
+    new DynParEvent(440, "vac_rate", 0.01, "Vaccinations picking up steam."),
+    ];
+}
 
 // Random initialization
 
@@ -1310,6 +1371,60 @@ class DynParEvent{
     state.covid_pars[this.field].value = this.value
     console.log(this.news_item)
     console.log(`Set ${this.field} to ${this.value}`)
+  }
+}
+
+class ToggleHL20Event{
+  constructor(step_no, news_item) {
+    this.step_no = step_no
+    this.news_item = news_item
+  }
+
+  trigger(state) {
+    return state.step_no == this.step_no
+  }
+
+  action_on(state) {
+    state.measures.hard_ld_inc.active = !state.measures.hard_ld_inc.active
+    console.log(this.news_item)
+    console.log(`Hard lockdown at 20 is ${state.measures.hard_ld_inc.active}`)
+  }
+}
+
+
+class ToggleTTIEvent{
+  constructor(step_no, news_item) {
+    this.step_no = step_no
+    this.news_item = news_item
+  }
+
+  trigger(state) {
+    return state.step_no == this.step_no
+  }
+
+  action_on(state) {
+    state.measures.test_trace_isolate.active = !state.measures.test_trace_isolate.active
+    console.log(this.news_item)
+    console.log(`TTI is ${state.measures.test_trace_isolate.active}`)
+  }
+}
+
+
+class SetCMLevelEvent{
+  constructor(step_no, lvl, news_item) {
+    this.step_no = step_no
+    this.news_item = news_item
+    this.lvl = lvl
+  }
+
+  trigger(state) {
+    return state.step_no == this.step_no
+  }
+
+  action_on(state) {
+    state.measures.meas_lvl = this.lvl
+    console.log(this.news_item)
+    console.log(`Measures at  ${this.lvl}`)
   }
 }
 
@@ -1634,4 +1749,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.faac8739dfa7c7f0fc34.js.map
+//# sourceMappingURL=bundle.a64c32b2402a7a854705.js.map

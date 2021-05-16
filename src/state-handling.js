@@ -80,6 +80,41 @@ export function init_state_0(gState, data) {
   gState.country.total = count((reg) => reg.total, gState.regions)
 }
 
+// Inital state for 2 years of Covid
+
+export function init_state_2y(gState, data) {
+  data.features.forEach(e => {
+    let r = region_with_incidence(e.properties.EWZ, 0, e.properties.AGS, e.properties.GEN)
+    // for distance between regions
+    // two passes to prevent expensive recalculation
+    r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
+    gState.regions.push(r);
+  });
+
+  // second pass ... finish up distance calculations
+  gState.regions.forEach((src_r) => {
+    gState.regions.forEach((dst_r, i) => {
+      src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
+    });
+  });
+
+  gState.topo = data;
+  gState.country.total = count((reg) => reg.total, gState.regions);
+
+  gState.scenario_max_length = 365 * 2;
+  gState.start_no = 0;
+
+
+  gState.events = [
+    new ToggleTTIEvent(15, "Starting Test Trace and Isolate Program."),
+    new SetCMLevelEvent(20, 3, "Taking some counter measures."),
+    new ToggleHL20Event(50, "Hard lockdown for >20 in effect."),
+    new DynParEvent(365, "bck_rate_m", 5., "January 1st, B.1.1.7 mutation appears among travelers coming into Germany."),
+    new DynParEvent(380, "vac_rate", 0.001, "Vaccinations starting slowly."),
+    new SetCMLevelEvent(400, 4, "Increasing counter measures."),
+    new DynParEvent(440, "vac_rate", 0.01, "Vaccinations picking up steam."),
+    ];
+}
 
 // Random initialization
 
@@ -126,6 +161,60 @@ export class DynParEvent{
     state.covid_pars[this.field].value = this.value
     console.log(this.news_item)
     console.log(`Set ${this.field} to ${this.value}`)
+  }
+}
+
+export class ToggleHL20Event{
+  constructor(step_no, news_item) {
+    this.step_no = step_no
+    this.news_item = news_item
+  }
+
+  trigger(state) {
+    return state.step_no == this.step_no
+  }
+
+  action_on(state) {
+    state.measures.hard_ld_inc.active = !state.measures.hard_ld_inc.active
+    console.log(this.news_item)
+    console.log(`Hard lockdown at 20 is ${state.measures.hard_ld_inc.active}`)
+  }
+}
+
+
+export class ToggleTTIEvent{
+  constructor(step_no, news_item) {
+    this.step_no = step_no
+    this.news_item = news_item
+  }
+
+  trigger(state) {
+    return state.step_no == this.step_no
+  }
+
+  action_on(state) {
+    state.measures.test_trace_isolate.active = !state.measures.test_trace_isolate.active
+    console.log(this.news_item)
+    console.log(`TTI is ${state.measures.test_trace_isolate.active}`)
+  }
+}
+
+
+export class SetCMLevelEvent{
+  constructor(step_no, lvl, news_item) {
+    this.step_no = step_no
+    this.news_item = news_item
+    this.lvl = lvl
+  }
+
+  trigger(state) {
+    return state.step_no == this.step_no
+  }
+
+  action_on(state) {
+    state.measures.meas_lvl = this.lvl
+    console.log(this.news_item)
+    console.log(`Measures at  ${this.lvl}`)
   }
 }
 

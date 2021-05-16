@@ -10,7 +10,7 @@ import ScenarioSelector from './scenario-selector';
 
 //---- Controls ---------------------------------------------------------------------------------------------------------------
 var running = false;  // TODO: this should be in State
-const MAX_DAYS = 200;
+// const MAX_DAYS = 200;
 var runner = document.getElementById("run");
 var tti_dial = document.getElementById("tti_dial");
 var hosp_dial = document.getElementById("hosp_dial");
@@ -18,9 +18,13 @@ var vac_dial = document.getElementById("vac_dial");
 
 function updateDials(state){
   tti_dial.innerHTML = state.country.global_tti
-  hosp_dial.innerHTML = "0" // let hos = N_total * dyn_pars.hospital_capacity.value / ((1 - v_rate) * I)
+  hosp_dial.innerHTML = "NA" // let hos = N_total * dyn_pars.hospital_capacity.value / ((1 - v_rate) * I)
   vac_dial.innerHTML = state.country.ratio_vac
 }
+
+
+var reseter = document.getElementById("reset");
+reseter.innerHTML = "[Reset]"
 
 const RunButtonContents = {
   PAUSED: "<i class='icon ic-run'></i> Run the simulation",
@@ -61,7 +65,7 @@ var forward = document.getElementById("forward");
 forward.innerHTML = "[Forward]"
 function clickForwardButton() {
   running = false;
-  while (gState.step_no < MAX_DAYS) {
+  while (gState.step_no < gState.scenario_max_length) {
       step_state(gState);
       updateProgressBar(gState.step_no);
     }
@@ -77,7 +81,7 @@ forwardButton.addEventListener('click', clickForwardButton);
 
 function updateProgressBar(day) {
   $('#gameProgressDay').html(`${day} ${day === 1 ? 'day' : 'days'}`);
-  $('#gameProgress .progress-bar').css('width', `${(day / MAX_DAYS) * 100}%`);
+  $('#gameProgress .progress-bar').css('width', `${(day / gState.scenario_max_length) * 100}%`);
 }
 
 function renderState(state) {
@@ -85,8 +89,9 @@ function renderState(state) {
   timelineChart.update();
   mapPlot.update();
   updateProgressBar(state.step_no);
+  updateMeas(state);
+  // TODO!! Match measure toggle to measure state
   // console.log("Rendered state", state);
-  console.log("Reset")
 }
 
 var gState = new State();
@@ -99,7 +104,8 @@ function initMeasures() {
       value: 0,
       min: 0,
       max: 4,
-      step: 1
+      step: 1,
+      id: 'slider'
     })
     .appendTo(cm);
 
@@ -133,6 +139,18 @@ function initMeasures() {
   });
 }
 initMeasures();
+
+
+var slider = document.getElementById("slider");
+var m0 = document.getElementById("m0");
+var m1 = document.getElementById("m1");
+
+function updateMeas(state){
+  slider.value = state.measures.meas_lvl
+  slider.text = state.measures.meas[state.measures.meas_lvl].desc
+  m0.checked = state.measures.test_trace_isolate.active
+  m1.checked = state.measures.hard_ld_inc.active
+}
 
 function toggleMeasure(cb) {
   if (gState == null) { return; }
@@ -184,7 +202,7 @@ let scenarioSelector = null;
 let mapPlot=null;
 
 function coreLoop(state) {
-  if (state.step_no > MAX_DAYS) { running = false; }
+  if (state.step_no > gState.scenario_max_length) { running = false; }
   if (running) {
     step_state(state);
     renderState(state);

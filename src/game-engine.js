@@ -102,13 +102,13 @@ export class DynParameters {
 
         // Disease dynamics
         this.mu = { value: 3, def: 3, desc: "Base R0: Number of people an infected infects on average." }
-        this.mu_m = { value: 4, def: 4, desc: "Base R0 for Mutant: Number of people someone infected by the mutant infects on average." }
+        this.mu_m = { value: 4.5, def: 4.5, desc: "Base R0 for Mutant: Number of people someone infected by the mutant infects on average." }
         this.I_to_R = { value: 0.2, def: 0.2, desc: "Daily rate of end of infectiousness (leading to recovery or death)." }
         this.E_to_I = { value: 0.4, def: 0.4, desc: "Daily rate of infection breaking out among those carrying the virus (they become infectious for others)." }
         this.k = { value: 0.1, def: 0.1, desc: "Overdispersion: Not everyone infects exactly R0 people, this parameter controls how much the number of infected varies from person to person." }
-        this.vac_rate = { value: 0.001, def: 0.001, desc: "Fraction of population vaccinated per day." }
+        this.vac_rate = { value: 0., def: 0., desc: "Fraction of population vaccinated per day." }
         this.vac_eff = { value: 0.8, def: 0.8, desc: "Fraction of infections prevented by vaccination." }
-        this.tti_capacity = { value: 0.0001, def: 0.0001, desc: "Trace capacity as fraction of total local population." }
+        this.tti_capacity = { value: 0.0002, def: 0.0002, desc: "Trace capacity as fraction of total local population." }
         this.bck_rate = { value: 0.5, def: 0.5, desc: "Average number of infected coming into each region per day from outside the country." }
         this.bck_rate_m = { value: 0., def: 0., desc: "Average number of mutant infected coming into each region per day from outside the country." }
 
@@ -302,9 +302,9 @@ export class Measures {
 
         this.meas = [
             { value: 1, impact: 0., desc: "No restrictions" },
-            { value: 1 - 0.1, impact: 0.1, desc: "Mild restrictions" },
-            { value: 1 - 0.2, impact: 0.2, desc: "Medium restrictions" },
-            { value: 1 - 0.6, impact: 0.6, desc: "Strong restrictions" },
+            { value: 1 - 0.1, impact: 0.01, desc: "Mild restrictions" },
+            { value: 1 - 0.2, impact: 0.1, desc: "Medium restrictions" },
+            { value: 1 - 0.6, impact: 0.5, desc: "Strong restrictions" },
             { value: 1 - 0.9, impact: 1., desc: "Hard Lockdown" }]
         this.meas_lvl = 0
         // this.gatherings_1000 = { value: 1 - 0.2, active: false, desc: "No gatherings with more than 1000 people" }

@@ -1,6 +1,7 @@
 import {
   init_state_inc,
-  init_state_0
+  init_state_0,
+  init_state_2y
 } from './state-handling.js';
 
 export default class ScenarioSelector {
@@ -25,6 +26,10 @@ export default class ScenarioSelector {
   initOptions(state) {
     this.state = state;
     this.options = [
+      {
+        label: 'Two years of covid',
+        init: init_state_2y,
+      },
       {
         label: 'Incidence 22.2.',
         init: init_state_inc,
