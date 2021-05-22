@@ -15,6 +15,8 @@ var runner = document.getElementById("run");
 var tti_dial = document.getElementById("tti_dial");
 var hosp_dial = document.getElementById("hosp_dial");
 var vac_dial = document.getElementById("vac_dial");
+var event_log = document.getElementById("events");
+
 
 function updateDials(state){
   tti_dial.innerHTML = state.country.global_tti
@@ -67,11 +69,8 @@ function clickForwardButton() {
   running = false;
   while (gState.step_no < gState.scenario_max_length) {
       step_state(gState);
-      updateProgressBar(gState.step_no);
-    }
-  timelineChart.update();
-  mapPlot.update();
-  console.log("Rendered state", gState);
+  }
+  renderState(gState);
 }
 
 var forwardButton = document.getElementById("forward");
@@ -90,7 +89,8 @@ function renderState(state) {
   mapPlot.update();
   updateProgressBar(state.step_no);
   updateMeas(state);
-  // TODO!! Match measure toggle to measure state
+  event_log.innerHTML = "";
+  for (let m of state.messages) {event_log.innerHTML += m + "<br>"}
   // console.log("Rendered state", state);
 }
 
@@ -110,12 +110,12 @@ function initMeasures() {
     .appendTo(cm);
 
   const $lockdownLvLegend = $('<div class="mb-4">')
+    .attr({id: 'slider text'})
     .appendTo(cm);
 
   $lockdownLvSlider.on('change', () => {
-    $lockdownLvLegend.text(`Level ${$lockdownLvSlider.val()}`);
     if (gState == null) { return; }
-    gState.measures.meas_lvl = $lockdownLvSlider.val();  
+    gState.measures.meas_lvl = $lockdownLvSlider.val();
     $lockdownLvLegend.text(gState.measures.meas[gState.measures.meas_lvl].desc);
   }).change();
 
@@ -144,10 +144,12 @@ initMeasures();
 var slider = document.getElementById("slider");
 var m0 = document.getElementById("m0");
 var m1 = document.getElementById("m1");
+var slider_text = document.getElementById("slider text");
+
 
 function updateMeas(state){
   slider.value = state.measures.meas_lvl
-  slider.text = state.measures.meas[state.measures.meas_lvl].desc
+  slider_text.innerHTML = state.measures.meas[state.measures.meas_lvl].desc
   m0.checked = state.measures.test_trace_isolate.active
   m1.checked = state.measures.hard_ld_inc.active
 }

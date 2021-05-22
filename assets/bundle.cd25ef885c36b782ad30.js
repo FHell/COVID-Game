@@ -763,6 +763,8 @@ var runner = document.getElementById("run");
 var tti_dial = document.getElementById("tti_dial");
 var hosp_dial = document.getElementById("hosp_dial");
 var vac_dial = document.getElementById("vac_dial");
+var event_log = document.getElementById("events");
+
 
 function updateDials(state){
   tti_dial.innerHTML = state.country.global_tti
@@ -815,11 +817,8 @@ function clickForwardButton() {
   running = false;
   while (gState.step_no < gState.scenario_max_length) {
       (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.step_state)(gState);
-      updateProgressBar(gState.step_no);
-    }
-  timelineChart.update();
-  mapPlot.update();
-  console.log("Rendered state", gState);
+  }
+  renderState(gState);
 }
 
 var forwardButton = document.getElementById("forward");
@@ -838,7 +837,8 @@ function renderState(state) {
   mapPlot.update();
   updateProgressBar(state.step_no);
   updateMeas(state);
-  // TODO!! Match measure toggle to measure state
+  event_log.innerHTML = "";
+  for (let m of state.messages) {event_log.innerHTML += m + "<br>"}
   // console.log("Rendered state", state);
 }
 
@@ -858,12 +858,12 @@ function initMeasures() {
     .appendTo(cm);
 
   const $lockdownLvLegend = $('<div class="mb-4">')
+    .attr({id: 'slider text'})
     .appendTo(cm);
 
   $lockdownLvSlider.on('change', () => {
-    $lockdownLvLegend.text(`Level ${$lockdownLvSlider.val()}`);
     if (gState == null) { return; }
-    gState.measures.meas_lvl = $lockdownLvSlider.val();  
+    gState.measures.meas_lvl = $lockdownLvSlider.val();
     $lockdownLvLegend.text(gState.measures.meas[gState.measures.meas_lvl].desc);
   }).change();
 
@@ -892,10 +892,12 @@ initMeasures();
 var slider = document.getElementById("slider");
 var m0 = document.getElementById("m0");
 var m1 = document.getElementById("m1");
+var slider_text = document.getElementById("slider text");
+
 
 function updateMeas(state){
   slider.value = state.measures.meas_lvl
-  slider.text = state.measures.meas[state.measures.meas_lvl].desc
+  slider_text.innerHTML = state.measures.meas[state.measures.meas_lvl].desc
   m0.checked = state.measures.test_trace_isolate.active
   m1.checked = state.measures.hard_ld_inc.active
 }
@@ -1340,7 +1342,7 @@ function init_state_random(gState, events){
 
 function step_state(state) {
   for (let e of state.events) {
-    if (e.trigger(state)) {e.action_on(state); state.messages.push(e.news_item)}
+    if (e.trigger(state)) {e.action_on(state); state.messages.push("Day " + state.step_no + ": " + e.news_item)}
   }
   // if (state.step_no < state.scenario_max_length) // Take this out for now, as it overlaps with MAX_DAYS handling in main.js
   state.step_no++;
@@ -1749,4 +1751,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.a64c32b2402a7a854705.js.map
+//# sourceMappingURL=bundle.cd25ef885c36b782ad30.js.map
