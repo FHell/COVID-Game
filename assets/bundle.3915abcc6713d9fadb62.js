@@ -790,7 +790,8 @@ var event_log = document.getElementById("events");
 var scen_inter = document.getElementById("allow_interactive");
 var ten_d = document.getElementById("10d_step");
 
-scen_inter.addEventListener('change', () => { console.log("interactivity switched"); });
+scen_inter.checked = true;
+ten_d.checked = false;
 
 function updateDials(state){
   tti_dial.innerHTML = state.country.global_tti
@@ -1802,4 +1803,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.6e2ae2e8c211863a40c6.js.map
+//# sourceMappingURL=bundle.3915abcc6713d9fadb62.js.map
