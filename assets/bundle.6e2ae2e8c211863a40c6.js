@@ -1004,7 +1004,7 @@ function start_sim(error, data) {
 
   // console.log("Initial State = ", gState);
 
-  timelineChart = new _timeline_chart__WEBPACK_IMPORTED_MODULE_3__.default($('#charts')[0], gState.country.I);
+  timelineChart = new _timeline_chart__WEBPACK_IMPORTED_MODULE_3__.default($('#charts')[0], gState.country.seven_d_incidence);
   timelineSelector = new _timeline_chart_selector__WEBPACK_IMPORTED_MODULE_4__.default(
     $('#chart_selector')[0], gState, timelineChart
   );
@@ -1512,6 +1512,8 @@ class TimelineChartSelector {
           .text(option.label)
           .attr('value', i + 1);
       }));
+    
+    this.handleChange();
 
   }
 
@@ -1800,4 +1802,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.c2c55eb92f80742c4941.js.map
+//# sourceMappingURL=bundle.6e2ae2e8c211863a40c6.js.map

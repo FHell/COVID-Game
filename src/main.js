@@ -233,7 +233,7 @@ function start_sim(error, data) {
 
   // console.log("Initial State = ", gState);
 
-  timelineChart = new TimelineChart($('#charts')[0], gState.country.I);
+  timelineChart = new TimelineChart($('#charts')[0], gState.country.seven_d_incidence);
   timelineSelector = new TimelineChartSelector(
     $('#chart_selector')[0], gState, timelineChart
   );

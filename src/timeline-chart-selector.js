@@ -13,6 +13,8 @@ export default class TimelineChartSelector {
           .text(option.label)
           .attr('value', i + 1);
       }));
+    
+    this.handleChange();
 
   }
 
