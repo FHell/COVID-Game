@@ -39,6 +39,14 @@
     <div class="col-md-4">
       <h2>Choose scenario</h2>
       <div id="scenario_selector"></div>
+      <div class="custom-control custom-switch custom-switch-md">
+        <input type="checkbox" id="allow_interactive" name="interactive" class="custom-control-input" value="interactive" checked="true" />
+        <label for="allow_interactive" class="custom-control-label">Allow Scenario to control measures</label>
+      </div>
+      <div class="custom-control custom-switch custom-switch-md">
+        <input type="checkbox" id="10d_step" name="10d" class="custom-control-input" value="10d" checked="false" />
+        <label for="10d_step" class="custom-control-label">Take ten day steps.</label>
+      </div>
       <br>
       <h2>Countermeasures</h2>
       <div id="countermeasures" class="mb-4"></div>

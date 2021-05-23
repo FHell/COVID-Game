@@ -28,8 +28,8 @@ export class Country {
         this.cumulative_deaths = [0] // Plot this
         this.cumulative_impact = [0] // Plot this
         this.seven_d_incidence = [0] // Plot this
-        this.seven_d_incidence_mut = [0] // Plot this
-        this.seven_d_incidence_ori = [0] // Plot this
+        this.seven_d_incidence_o = [0] // Plot this
+        this.seven_d_incidence_m = [0] // Plot this
         this.global_tti = 0. // Give a gauge showing this.
     }
 }
@@ -56,6 +56,8 @@ class Region {
         this.neighbours = Array() // Needs to be populated later
 
         this.seven_d_incidence = [0] // Map this
+        this.seven_d_incidence_m = [0] // Map this
+        this.seven_d_incidence_o = [0] // Map this
         this.seven_d_incidence_velocity = [0] // Map this
         this.local_tti = 0. // Map this
         this.cumulative_deaths = [0] // Map this
@@ -408,7 +410,10 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
 
     let d = deaths(dyn_pars, reg.I[now] + reg.Im[now], country.ratio_vac, delta_R + delta_Rm, reg.total)
 
-    reg.seven_d_incidence.push(avg7_incidence(reg))
+    let [s, s_o, s_m] = seven_d_incidence(reg)
+    reg.seven_d_incidence.push(s)
+    reg.seven_d_incidence_o.push(s_o)
+    reg.seven_d_incidence_m.push(s_m)
 
     if (now > 0) {
         reg.seven_d_incidence_velocity.push(reg.seven_d_incidence[now + 1] - reg.seven_d_incidence[now])
@@ -484,7 +489,12 @@ export function step_epidemic(country, regions, cm, dyn_pars, travel) {
     country.cumulative_infections_original_only.push(country.cumulative_infections_original_only[now] + delta_E)
     country.cumulative_deaths.push(country.cumulative_deaths[now] + d)
     country.cumulative_impact.push(country.cumulative_impact[now] + impact / country.total)
-    country.seven_d_incidence.push(avg7_incidence(country))
+
+    let [s, s_o, s_m] = seven_d_incidence(country)
+    country.seven_d_incidence.push(s)
+    country.seven_d_incidence_o.push(s_o)
+    country.seven_d_incidence_m.push(s_m)
+
     country.global_tti = tti_global_effectiveness(regions, dyn_pars, cm)
     // debug output
     // let re = regions[2]
@@ -514,7 +524,10 @@ function none_step(reg) {
 
     let d = 0
 
-    reg.seven_d_incidence.push(avg7_incidence(reg))
+    let [s, s_o, s_m] = seven_d_incidence(reg)
+    reg.seven_d_incidence.push(s)
+    reg.seven_d_incidence_o.push(s_o)
+    reg.seven_d_incidence_m.push(s_m)
 
     if (now > 0) {
         reg.seven_d_incidence_velocity.push(reg.seven_d_incidence[now + 1] - reg.seven_d_incidence[now])
@@ -554,7 +567,12 @@ export function none_step_epidemic(country, regions, cm, dyn_pars) {
     country.cumulative_infections_mutation_only.push(country.cumulative_infections_mutation_only[now])
     country.cumulative_infections_original_only.push(country.cumulative_infections_original_only[now])
     country.cumulative_deaths.push(country.cumulative_deaths[now])
-    country.seven_d_incidence.push(avg7_incidence(country))
+    
+    let [s, s_o, s_m] = seven_d_incidence(country)
+    country.seven_d_incidence.push(s)
+    country.seven_d_incidence_o.push(s_o)
+    country.seven_d_incidence_m.push(s_m)
+
     country.global_tti = tti_global_effectiveness(regions, dyn_pars, cm)
     // debug output
     // let re = regions[2]
@@ -599,15 +617,20 @@ function R_now(reg) { return get_current(reg.R); }
 function average(arr) { return arr.reduce((a, v) => a + v, 0) / arr.length; }
 
 // TODO: fix the projections above so that we can use them here
-export function avg7_incidence(reg) {
-    let c = 0, s = 0;
+export function seven_d_incidence(reg) {
+    let c = 0, s_o = 0, s_m = 0
     for (let i = reg.I.length - 3; i >= 0; i--) {
         c++;
-        s += ((reg.I[i] + reg.Im[i] + reg.E[i] + reg.Em[i]) / reg.total) * 100000;
+        // s += ((reg.I[i] + reg.Im[i] + reg.E[i] + reg.Em[i]) / reg.total) * 100000;
+        s_o += reg.I[i];
+        s_m += reg.Im[i];
 
         if (c > 7) { break; }
     }
-    return (s / c) || 0;
+    if (c == 0) {return [0, 0, 0];};
+    s_o *= 100000 / reg.total / 2 * (7/c); // assume that we only register half of the infectious, and correct for cases where we don't have a seven day history
+    s_m *= 100000 / reg.total / 2 * (7/c); // assume that we only register half of the infectious
+    return [s_m + s_o || 0, s_m  || 0, s_o || 0]
 }
 
 //tti = Test Trace Isolate

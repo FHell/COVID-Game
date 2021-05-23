@@ -25,7 +25,7 @@ export class State {
     this.messages = []
     this.topo = []
     this.scenario_max_length = 200
-    this.start_no = 7; // scenario_start
+    this.start_no = 0; // scenario_start
 
   }
 }
@@ -128,9 +128,9 @@ export function init_state_random(gState, events){
 
 // State stepping forward
 
-export function step_state(state) {
+export function step_state(state, interactive_mode) {
   for (let e of state.events) {
-    if (e.trigger(state)) {e.action_on(state); state.messages.push("Day " + state.step_no + ": " + e.news_item)}
+    if (e.trigger(state, interactive_mode)) {e.action_on(state); state.messages.push("Day " + state.step_no + ": " + e.news_item)}
   }
   // if (state.step_no < state.scenario_max_length) // Take this out for now, as it overlaps with MAX_DAYS handling in main.js
   state.step_no++;
@@ -153,7 +153,7 @@ export class DynParEvent{
     this.news_item = news_item
   }
 
-  trigger(state) {
+  trigger(state, interactive_mode) {
     return state.step_no == this.step_no
   }
 
@@ -170,8 +170,8 @@ export class ToggleHL20Event{
     this.news_item = news_item
   }
 
-  trigger(state) {
-    return state.step_no == this.step_no
+  trigger(state, interactive_mode) {
+    return (state.step_no == this.step_no) && interactive_mode
   }
 
   action_on(state) {
@@ -188,8 +188,8 @@ export class ToggleTTIEvent{
     this.news_item = news_item
   }
 
-  trigger(state) {
-    return state.step_no == this.step_no
+  trigger(state, interactive_mode) {
+    return (state.step_no == this.step_no) && interactive_mode
   }
 
   action_on(state) {
@@ -207,8 +207,8 @@ export class SetCMLevelEvent{
     this.lvl = lvl
   }
 
-  trigger(state) {
-    return state.step_no == this.step_no
+  trigger(state, interactive_mode) {
+    return (state.step_no == this.step_no) && interactive_mode
   }
 
   action_on(state) {

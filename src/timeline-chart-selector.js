@@ -20,47 +20,59 @@ export default class TimelineChartSelector {
     this.state = state;
     this.options = [
       {
-        label: 'Infections',
-        data: [state.country.I],
+        label: '7-day average incidence',
+        data: [state.country.seven_d_incidence],
         properties:
         {
-          start_drawing: state.step_no,
-          y_max: 400,
-        }
-      },
-      {
-        label: 'Infections (cumulative)',
-        data: [state.country.cumulative_infections],
-        properties:
-        {
-          start_drawing: state.step_no,
-          y_max: 400,
-        }
-      },
-      {
-        label: 'Infections (cumulative, per strain)',
-        data: [
-          state.country.cumulative_infections_original_only,
-          state.country.cumulative_infections_mutation_only,
-        ],
-        properties:
-        {
-          start_drawing: state.step_no,
-          y_max: 400,
-        }
-      },
-      {
-        label: 'Deaths',
-        data: [state.country.deaths],
-        properties:
-        {
-          start_drawing: state.step_no,
+          start_drawing: state.start_no,
           y_max: 10,
         }
       },
       {
-        label: 'Deaths (cumulative)',
-        data: [state.country.cumulative_deaths],
+        label: '7-day average incidence by strain',
+        data: [
+          state.country.seven_d_incidence_m,
+          state.country.seven_d_incidence_o,
+        ],
+        properties:
+        {
+          start_drawing: state.start_no,
+          y_max: 10,
+        }
+      },
+      // {
+      //   label: 'Infections',
+      //   data: [state.country.I],
+      //   properties:
+      //   {
+      //     start_drawing: state.step_no,
+      //     y_max: 400,
+      //   }
+      // },
+      // {
+      //   label: 'Infections (cumulative)',
+      //   data: [state.country.cumulative_infections],
+      //   properties:
+      //   {
+      //     start_drawing: state.step_no,
+      //     y_max: 400,
+      //   }
+      // },
+      // {
+      //   label: 'Infections (cumulative, per strain)',
+      //   data: [
+      //     state.country.cumulative_infections_original_only,
+      //     state.country.cumulative_infections_mutation_only,
+      //   ],
+      //   properties:
+      //   {
+      //     start_drawing: state.step_no,
+      //     y_max: 400,
+      //   }
+      // },
+      {
+        label: 'Deaths',
+        data: [state.country.deaths],
         properties:
         {
           start_drawing: state.step_no,
@@ -77,11 +89,11 @@ export default class TimelineChartSelector {
         }
       },
       {
-        label: '7-day average incidence',
-        data: [state.country.seven_d_incidence],
+        label: 'Deaths (cumulative)',
+        data: [state.country.cumulative_deaths],
         properties:
         {
-          start_drawing: state.start_no,
+          start_drawing: state.step_no,
           y_max: 10,
         }
       },

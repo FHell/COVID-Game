@@ -30,7 +30,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "none_step_epidemic": () => (/* binding */ none_step_epidemic),
 /* harmony export */   "get_current": () => (/* binding */ get_current),
 /* harmony export */   "count": () => (/* binding */ count),
-/* harmony export */   "avg7_incidence": () => (/* binding */ avg7_incidence),
+/* harmony export */   "seven_d_incidence": () => (/* binding */ seven_d_incidence),
 /* harmony export */   "init_random_regions": () => (/* binding */ init_random_regions)
 /* harmony export */ });
 // Core data structures
@@ -63,8 +63,8 @@ class Country {
         this.cumulative_deaths = [0] // Plot this
         this.cumulative_impact = [0] // Plot this
         this.seven_d_incidence = [0] // Plot this
-        this.seven_d_incidence_mut = [0] // Plot this
-        this.seven_d_incidence_ori = [0] // Plot this
+        this.seven_d_incidence_o = [0] // Plot this
+        this.seven_d_incidence_m = [0] // Plot this
         this.global_tti = 0. // Give a gauge showing this.
     }
 }
@@ -91,6 +91,8 @@ class Region {
         this.neighbours = Array() // Needs to be populated later
 
         this.seven_d_incidence = [0] // Map this
+        this.seven_d_incidence_m = [0] // Map this
+        this.seven_d_incidence_o = [0] // Map this
         this.seven_d_incidence_velocity = [0] // Map this
         this.local_tti = 0. // Map this
         this.cumulative_deaths = [0] // Map this
@@ -443,7 +445,10 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
 
     let d = deaths(dyn_pars, reg.I[now] + reg.Im[now], country.ratio_vac, delta_R + delta_Rm, reg.total)
 
-    reg.seven_d_incidence.push(avg7_incidence(reg))
+    let [s, s_o, s_m] = seven_d_incidence(reg)
+    reg.seven_d_incidence.push(s)
+    reg.seven_d_incidence_o.push(s_o)
+    reg.seven_d_incidence_m.push(s_m)
 
     if (now > 0) {
         reg.seven_d_incidence_velocity.push(reg.seven_d_incidence[now + 1] - reg.seven_d_incidence[now])
@@ -519,7 +524,12 @@ function step_epidemic(country, regions, cm, dyn_pars, travel) {
     country.cumulative_infections_original_only.push(country.cumulative_infections_original_only[now] + delta_E)
     country.cumulative_deaths.push(country.cumulative_deaths[now] + d)
     country.cumulative_impact.push(country.cumulative_impact[now] + impact / country.total)
-    country.seven_d_incidence.push(avg7_incidence(country))
+
+    let [s, s_o, s_m] = seven_d_incidence(country)
+    country.seven_d_incidence.push(s)
+    country.seven_d_incidence_o.push(s_o)
+    country.seven_d_incidence_m.push(s_m)
+
     country.global_tti = tti_global_effectiveness(regions, dyn_pars, cm)
     // debug output
     // let re = regions[2]
@@ -549,7 +559,10 @@ function none_step(reg) {
 
     let d = 0
 
-    reg.seven_d_incidence.push(avg7_incidence(reg))
+    let [s, s_o, s_m] = seven_d_incidence(reg)
+    reg.seven_d_incidence.push(s)
+    reg.seven_d_incidence_o.push(s_o)
+    reg.seven_d_incidence_m.push(s_m)
 
     if (now > 0) {
         reg.seven_d_incidence_velocity.push(reg.seven_d_incidence[now + 1] - reg.seven_d_incidence[now])
@@ -589,7 +602,12 @@ function none_step_epidemic(country, regions, cm, dyn_pars) {
     country.cumulative_infections_mutation_only.push(country.cumulative_infections_mutation_only[now])
     country.cumulative_infections_original_only.push(country.cumulative_infections_original_only[now])
     country.cumulative_deaths.push(country.cumulative_deaths[now])
-    country.seven_d_incidence.push(avg7_incidence(country))
+    
+    let [s, s_o, s_m] = seven_d_incidence(country)
+    country.seven_d_incidence.push(s)
+    country.seven_d_incidence_o.push(s_o)
+    country.seven_d_incidence_m.push(s_m)
+
     country.global_tti = tti_global_effectiveness(regions, dyn_pars, cm)
     // debug output
     // let re = regions[2]
@@ -634,15 +652,20 @@ function R_now(reg) { return get_current(reg.R); }
 function average(arr) { return arr.reduce((a, v) => a + v, 0) / arr.length; }
 
 // TODO: fix the projections above so that we can use them here
-function avg7_incidence(reg) {
-    let c = 0, s = 0;
+function seven_d_incidence(reg) {
+    let c = 0, s_o = 0, s_m = 0
     for (let i = reg.I.length - 3; i >= 0; i--) {
         c++;
-        s += ((reg.I[i] + reg.Im[i] + reg.E[i] + reg.Em[i]) / reg.total) * 100000;
+        // s += ((reg.I[i] + reg.Im[i] + reg.E[i] + reg.Em[i]) / reg.total) * 100000;
+        s_o += reg.I[i];
+        s_m += reg.Im[i];
 
         if (c > 7) { break; }
     }
-    return (s / c) || 0;
+    if (c == 0) {return [0, 0, 0];};
+    s_o *= 100000 / reg.total / 2 * (7/c); // assume that we only register half of the infectious, and correct for cases where we don't have a seven day history
+    s_m *= 100000 / reg.total / 2 * (7/c); // assume that we only register half of the infectious
+    return [s_m + s_o || 0, s_m  || 0, s_o || 0]
 }
 
 //tti = Test Trace Isolate
@@ -764,7 +787,10 @@ var tti_dial = document.getElementById("tti_dial");
 var hosp_dial = document.getElementById("hosp_dial");
 var vac_dial = document.getElementById("vac_dial");
 var event_log = document.getElementById("events");
+var scen_inter = document.getElementById("allow_interactive");
+var ten_d = document.getElementById("10d_step");
 
+scen_inter.addEventListener('change', () => { console.log("interactivity switched"); });
 
 function updateDials(state){
   tti_dial.innerHTML = state.country.global_tti
@@ -816,7 +842,7 @@ forward.innerHTML = "[Forward]"
 function clickForwardButton() {
   running = false;
   while (gState.step_no < gState.scenario_max_length) {
-      (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.step_state)(gState);
+      (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.step_state)(gState, scen_inter.checked);
   }
   renderState(gState);
 }
@@ -953,10 +979,20 @@ let mapPlot=null;
 
 function coreLoop(state) {
   if (state.step_no > gState.scenario_max_length) { running = false; }
-  if (running) {
-    (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.step_state)(state);
+  if (running && !ten_d.checked) {
+    (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.step_state)(state, scen_inter.checked);
     renderState(state);
   }
+
+  if (running && ten_d.checked) {
+    let i = 0
+    while (i < 10 && state.step_no <= gState.scenario_max_length) {
+      (0,_state_handling_js__WEBPACK_IMPORTED_MODULE_0__.step_state)(state, scen_inter.checked);
+      i++;
+    }
+    renderState(state);
+  }
+
 
   setTimeout(coreLoop, 300, gState); // This can't be state because we swap out the global gState for a new State on reset,
   // and state would continue to reference the old global...
@@ -1237,7 +1273,7 @@ class State {
     this.messages = []
     this.topo = []
     this.scenario_max_length = 200
-    this.start_no = 7; // scenario_start
+    this.start_no = 0; // scenario_start
 
   }
 }
@@ -1340,9 +1376,9 @@ function init_state_random(gState, events){
 
 // State stepping forward
 
-function step_state(state) {
+function step_state(state, interactive_mode) {
   for (let e of state.events) {
-    if (e.trigger(state)) {e.action_on(state); state.messages.push("Day " + state.step_no + ": " + e.news_item)}
+    if (e.trigger(state, interactive_mode)) {e.action_on(state); state.messages.push("Day " + state.step_no + ": " + e.news_item)}
   }
   // if (state.step_no < state.scenario_max_length) // Take this out for now, as it overlaps with MAX_DAYS handling in main.js
   state.step_no++;
@@ -1365,7 +1401,7 @@ class DynParEvent{
     this.news_item = news_item
   }
 
-  trigger(state) {
+  trigger(state, interactive_mode) {
     return state.step_no == this.step_no
   }
 
@@ -1382,8 +1418,8 @@ class ToggleHL20Event{
     this.news_item = news_item
   }
 
-  trigger(state) {
-    return state.step_no == this.step_no
+  trigger(state, interactive_mode) {
+    return (state.step_no == this.step_no) && interactive_mode
   }
 
   action_on(state) {
@@ -1400,8 +1436,8 @@ class ToggleTTIEvent{
     this.news_item = news_item
   }
 
-  trigger(state) {
-    return state.step_no == this.step_no
+  trigger(state, interactive_mode) {
+    return (state.step_no == this.step_no) && interactive_mode
   }
 
   action_on(state) {
@@ -1419,8 +1455,8 @@ class SetCMLevelEvent{
     this.lvl = lvl
   }
 
-  trigger(state) {
-    return state.step_no == this.step_no
+  trigger(state, interactive_mode) {
+    return (state.step_no == this.step_no) && interactive_mode
   }
 
   action_on(state) {
@@ -1483,47 +1519,59 @@ class TimelineChartSelector {
     this.state = state;
     this.options = [
       {
-        label: 'Infections',
-        data: [state.country.I],
+        label: '7-day average incidence',
+        data: [state.country.seven_d_incidence],
         properties:
         {
-          start_drawing: state.step_no,
-          y_max: 400,
-        }
-      },
-      {
-        label: 'Infections (cumulative)',
-        data: [state.country.cumulative_infections],
-        properties:
-        {
-          start_drawing: state.step_no,
-          y_max: 400,
-        }
-      },
-      {
-        label: 'Infections (cumulative, per strain)',
-        data: [
-          state.country.cumulative_infections_original_only,
-          state.country.cumulative_infections_mutation_only,
-        ],
-        properties:
-        {
-          start_drawing: state.step_no,
-          y_max: 400,
-        }
-      },
-      {
-        label: 'Deaths',
-        data: [state.country.deaths],
-        properties:
-        {
-          start_drawing: state.step_no,
+          start_drawing: state.start_no,
           y_max: 10,
         }
       },
       {
-        label: 'Deaths (cumulative)',
-        data: [state.country.cumulative_deaths],
+        label: '7-day average incidence by strain',
+        data: [
+          state.country.seven_d_incidence_m,
+          state.country.seven_d_incidence_o,
+        ],
+        properties:
+        {
+          start_drawing: state.start_no,
+          y_max: 10,
+        }
+      },
+      // {
+      //   label: 'Infections',
+      //   data: [state.country.I],
+      //   properties:
+      //   {
+      //     start_drawing: state.step_no,
+      //     y_max: 400,
+      //   }
+      // },
+      // {
+      //   label: 'Infections (cumulative)',
+      //   data: [state.country.cumulative_infections],
+      //   properties:
+      //   {
+      //     start_drawing: state.step_no,
+      //     y_max: 400,
+      //   }
+      // },
+      // {
+      //   label: 'Infections (cumulative, per strain)',
+      //   data: [
+      //     state.country.cumulative_infections_original_only,
+      //     state.country.cumulative_infections_mutation_only,
+      //   ],
+      //   properties:
+      //   {
+      //     start_drawing: state.step_no,
+      //     y_max: 400,
+      //   }
+      // },
+      {
+        label: 'Deaths',
+        data: [state.country.deaths],
         properties:
         {
           start_drawing: state.step_no,
@@ -1540,11 +1588,11 @@ class TimelineChartSelector {
         }
       },
       {
-        label: '7-day average incidence',
-        data: [state.country.seven_d_incidence],
+        label: 'Deaths (cumulative)',
+        data: [state.country.cumulative_deaths],
         properties:
         {
-          start_drawing: state.start_no,
+          start_drawing: state.step_no,
           y_max: 10,
         }
       },
@@ -1639,6 +1687,7 @@ class TimelineChart {
             },
           }],
           yAxes: [{
+            stacked: true,
             gridLines: {
               color: '#b8b8b8',
               zeroLineColor: '#000',
@@ -1751,4 +1800,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.cd25ef885c36b782ad30.js.map
+//# sourceMappingURL=bundle.c2c55eb92f80742c4941.js.map

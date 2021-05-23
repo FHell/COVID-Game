@@ -59,6 +59,7 @@ export default class TimelineChart {
             },
           }],
           yAxes: [{
+            stacked: true,
             gridLines: {
               color: '#b8b8b8',
               zeroLineColor: '#000',

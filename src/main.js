@@ -16,7 +16,10 @@ var tti_dial = document.getElementById("tti_dial");
 var hosp_dial = document.getElementById("hosp_dial");
 var vac_dial = document.getElementById("vac_dial");
 var event_log = document.getElementById("events");
+var scen_inter = document.getElementById("allow_interactive");
+var ten_d = document.getElementById("10d_step");
 
+scen_inter.addEventListener('change', () => { console.log("interactivity switched"); });
 
 function updateDials(state){
   tti_dial.innerHTML = state.country.global_tti
@@ -68,7 +71,7 @@ forward.innerHTML = "[Forward]"
 function clickForwardButton() {
   running = false;
   while (gState.step_no < gState.scenario_max_length) {
-      step_state(gState);
+      step_state(gState, scen_inter.checked);
   }
   renderState(gState);
 }
@@ -205,10 +208,20 @@ let mapPlot=null;
 
 function coreLoop(state) {
   if (state.step_no > gState.scenario_max_length) { running = false; }
-  if (running) {
-    step_state(state);
+  if (running && !ten_d.checked) {
+    step_state(state, scen_inter.checked);
     renderState(state);
   }
+
+  if (running && ten_d.checked) {
+    let i = 0
+    while (i < 10 && state.step_no <= gState.scenario_max_length) {
+      step_state(state, scen_inter.checked);
+      i++;
+    }
+    renderState(state);
+  }
+
 
   setTimeout(coreLoop, 300, gState); // This can't be state because we swap out the global gState for a new State on reset,
   // and state would continue to reference the old global...
