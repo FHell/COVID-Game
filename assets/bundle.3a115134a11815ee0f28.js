@@ -53,6 +53,9 @@ class Country {
         this.Im = [0]
         this.R = [0]
 
+        this.delta_I = [0]
+        this.delta_Im = [0]
+
         this.ratio_vac = 0
         this.total = 0
 
@@ -80,6 +83,9 @@ class Region {
         this.Em = N_Em
         this.Im = N_Im
         this.R = N_R
+
+        this.delta_I = [0]
+        this.delta_Im = [0]
 
         this.total = N_total
 
@@ -443,6 +449,9 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
     reg.Im.push(reg.Im[now] + delta_Im - delta_Rm)
     reg.R.push(reg.R[now] + delta_R + delta_Rm)
 
+    reg.delta_I.push(delta_I);
+    reg.delta_Im.push(delta_Im);
+
     let d = deaths(dyn_pars, reg.I[now] + reg.Im[now], country.ratio_vac, delta_R + delta_Rm, reg.total)
 
     let [s, s_o, s_m] = seven_d_incidence(reg)
@@ -461,7 +470,7 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
         reg.cumulative_impact.push(local_impact)
     }
 
-    return [d, delta_E, delta_Em, local_impact]
+    return [d, delta_E, delta_Em, local_impact, delta_I, delta_Im]
 }
 
 
@@ -496,6 +505,8 @@ function step_epidemic(country, regions, cm, dyn_pars, travel) {
     let impact = 0
     let delta_E = 0
     let delta_Em = 0
+    let delta_I = 0
+    let delta_Im = 0
 
 
     for (let reg of regions) {
@@ -504,6 +515,8 @@ function step_epidemic(country, regions, cm, dyn_pars, travel) {
         delta_E += ls[1]
         delta_Em += ls[2]
         impact += reg.total * ls[3]
+        delta_I += ls[4]
+        delta_Im += ls[5]
     }
 
     // Push to the data arrays.
@@ -518,6 +531,9 @@ function step_epidemic(country, regions, cm, dyn_pars, travel) {
     country.Im.push(count(Im_now, regions))
     country.R.push(count(R_now, regions))
     country.deaths.push(d)
+
+    country.delta_I.push(delta_I);
+    country.delta_Im.push(delta_Im);
 
     country.cumulative_infections.push(country.cumulative_infections[now] + delta_E + delta_Em)
     country.cumulative_infections_mutation_only.push(country.cumulative_infections_mutation_only[now] + delta_Em)
@@ -657,8 +673,8 @@ function seven_d_incidence(reg) {
     for (let i = reg.I.length - 3; i >= 0; i--) {
         c++;
         // s += ((reg.I[i] + reg.Im[i] + reg.E[i] + reg.Em[i]) / reg.total) * 100000;
-        s_o += reg.I[i];
-        s_m += reg.Im[i];
+        s_o += reg.delta_I[i];
+        s_m += reg.delta_Im[i];
 
         if (c > 7) { break; }
     }
@@ -1803,4 +1819,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.3915abcc6713d9fadb62.js.map
+//# sourceMappingURL=bundle.3a115134a11815ee0f28.js.map
