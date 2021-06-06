@@ -200,6 +200,7 @@ function changeParams(id, value) {
 
 d3.queue()
   .defer(d3.json, "data/RKI_Corona_Landkreise.geojson")
+  .defer(d3.json, "data/travel_model.json")
   .await(start_sim);
 
 let timelineChart = null;
@@ -228,7 +229,7 @@ function coreLoop(state) {
   // and state would continue to reference the old global...
 };
 
-function start_sim(error, data) {
+function start_sim(error, LK_data, travel_model) {
   // init_state_inc(gState, data);
   // init_state_0(gState, data);
 
@@ -239,7 +240,7 @@ function start_sim(error, data) {
     $('#chart_selector')[0], gState, timelineChart
   );
   scenarioSelector = new ScenarioSelector(
-    $('#scenario_selector')[0], gState, data, clickResetButton);
+    $('#scenario_selector')[0], gState, [LK_data, travel_model], clickResetButton);
 
   mapPlot = new MapPlot($('#mapPlot')[0], gState.topo, gState);
   mapPlot.draw();

@@ -120,6 +120,9 @@ export class DynParameters {
         this.bck_rate = { value: 0.5, def: 0.5, desc: "Average number of infected coming into each region per day from outside the country." }
         this.bck_rate_m = { value: 0., def: 0., desc: "Average number of mutant infected coming into each region per day from outside the country." }
 
+        this.season_start = 0 // The number in the scenario relative to which seasonality is calculated
+        // corresponds to the day of highest R0
+
         // Death model
         this.hospital_capacity = { value: 0.001, def: 0.001, desc: "ICU capacity as a fraction of population." }
         this.death_rate_1 = { value: 0.01, def: 0.01, desc: "Fraction of deaths for people within hospital capactity." }
@@ -440,32 +443,33 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
 
 
 
-export function step_epidemic(country, regions, cm, dyn_pars, travel) {
+export function step_epidemic(country, regions, cm, dyn_pars, travel_model) {
 
     country.ratio_vac += dyn_pars.vac_rate.value // Vaccinate some people...
     if (country.ratio_vac > 1.) {country.ratio_vac = 1.} // ... but not more than all people.
 
     // console.log(country.ratio_vac)
 
-    // travel is the fraction of people from a region that travel to a neighbouring region
-    // in our first approximation these are simply all regions within 100km and travel is a constant fraction.
-    // these people cause infections at the place they travel to as well as at home.
-
     let now = regions[0].S.length - 1;
 
     for (let reg of regions) {
-
         reg.travel_I = 0
         reg.travel_Im = 0
-        for (let nei of reg.neighbours) {
-            if (nei.dist < 100 && reg != regions[nei.index]) {
-                reg.travel_I += Math.round(travel * regions[nei.index].I[now])
-                reg.travel_Im += Math.round(travel * regions[nei.index].Im[now])
-            }
-        }
     }
 
-    let mu_mult = measure_effect(cm)
+    for (let trav of travel_model) {
+        let I_here_now = regions[trav["index"]].I[now]
+        let Im_here_now = regions[trav["index"]].Im[now]
+        for (let i = 0; i++; i < length(regions)) {
+            regions[i].travel_I += 3 * I_here_now * trav["travel"][i]
+            regions[i].travel_Im += 3 * Im_here_now * trav["travel"][i]
+            }
+        }    // The 3 here arises from a fudge factor from the travel model. Essentially the issue is
+        // that in the model in some few regions there are more trips than people.
+        // Thus the travel is scaled down by a factor of 6. That looks to weak though.
+
+    // Seasonality and counter measures:
+    let mu_mult = measure_effect(cm) * (0.8  + 0.4 * Math.cos(2 * Math.PI * (now - dyn_pars.season_start) / 365))
     let d = 0
     let impact = 0
     let delta_E = 0
@@ -701,7 +705,7 @@ function self_test() {
     for (let n = 0; n < 150; n++) {
         log_country(country)
 
-        step_epidemic(country, Regions, c_meas, dyn_pars, 0.01)
+        step_epidemic(country, Regions, c_meas, dyn_pars, [])
     }
 
     console.log("Starting test and trace program")
@@ -710,7 +714,7 @@ function self_test() {
     for (let n = 0; n < 15; n++) {
         log_country(country)
 
-        step_epidemic(country, Regions, c_meas, dyn_pars, 0.01)
+        step_epidemic(country, Regions, c_meas, dyn_pars, [])
     }
     console.log("Switching on all counter measures")
 
@@ -726,7 +730,7 @@ function self_test() {
     for (let n = 0; n < 25; n++) {
         log_country(country)
 
-        step_epidemic(country, Regions, c_meas, dyn_pars, 0.01)
+        step_epidemic(country, Regions, c_meas, dyn_pars, [])
     }
     log_country(country)
     log_country(country)

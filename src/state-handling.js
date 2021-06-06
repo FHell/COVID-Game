@@ -24,6 +24,7 @@ export class State {
     this.events = []
     this.messages = []
     this.topo = []
+    this.travel_model = []
     this.scenario_max_length = 200
     this.start_no = 0; // scenario_start
 
@@ -33,20 +34,22 @@ export class State {
 // Initializing from the RKI Data in geojson format using only population numbers and 7 day incidence.
 
 export function init_state_inc(gState, data) {
-  data.features.forEach(e => {
+  let LK_data = data[0]
+  let travel_model = data[1]
+  LK_data.features.forEach(e => {
     let r = region_with_incidence(e.properties.EWZ, e.properties.cases7_per_100k, e.properties.AGS, e.properties.GEN)
-    // for distance between regions
-    // two passes to prevent expensive recalculation
-    r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
+    // // for distance between regions
+    // // two passes to prevent expensive recalculation
+    // r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
     gState.regions.push(r);
   });
 
-  // second pass ... finish up distance calculations
-  gState.regions.forEach((src_r) => {
-    gState.regions.forEach((dst_r, i) => {
-      src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
-    });
-  });
+  // // second pass ... finish up distance calculations
+  // gState.regions.forEach((src_r) => {
+  //   gState.regions.forEach((dst_r, i) => {
+  //     src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
+  //   });
+  // });
 
   gState.start_no = 7
 
@@ -54,52 +57,29 @@ export function init_state_inc(gState, data) {
     none_step_epidemic(gState.country, gState.regions, gState.measures, gState.covid_pars);
   }
 
-
-
-  gState.topo = data;
+  gState.topo = LK_data;
+  gState.travel_model = travel_model;
   gState.country.total = count((reg) => reg.total, gState.regions)
 }
 
 export function init_state_0(gState, data) {
-  data.features.forEach(e => {
+  let LK_data = data[0]
+  let travel_model = data[1]
+
+  LK_data.features.forEach(e => {
     let r = region_with_incidence(e.properties.EWZ, 0, e.properties.AGS, e.properties.GEN)
-    // for distance between regions
-    // two passes to prevent expensive recalculation
-    r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
     gState.regions.push(r);
   });
 
-  // second pass ... finish up distance calculations
-  gState.regions.forEach((src_r) => {
-    gState.regions.forEach((dst_r, i) => {
-      src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
-    });
-  });
-
-  gState.topo = data;
+  gState.topo = LK_data;
+  gState.travel_model = travel_model;
   gState.country.total = count((reg) => reg.total, gState.regions)
 }
 
 // Inital state for 2 years of Covid
 
 export function init_state_2y(gState, data) {
-  data.features.forEach(e => {
-    let r = region_with_incidence(e.properties.EWZ, 0, e.properties.AGS, e.properties.GEN)
-    // for distance between regions
-    // two passes to prevent expensive recalculation
-    r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
-    gState.regions.push(r);
-  });
-
-  // second pass ... finish up distance calculations
-  gState.regions.forEach((src_r) => {
-    gState.regions.forEach((dst_r, i) => {
-      src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
-    });
-  });
-
-  gState.topo = data;
-  gState.country.total = count((reg) => reg.total, gState.regions);
+  init_state_0(gState, data);
 
   gState.scenario_max_length = 365 * 2;
   gState.start_no = 0;
@@ -120,6 +100,7 @@ export function init_state_2y(gState, data) {
 
 export function init_state_random(gState, events){
   // Initialize a baseline scenario without any covid.
+  // only use for testing, can't be plotted!
   gState.regions = init_random_regions()
   gState.country.total = count((reg) => reg.total, gState.regions)
   gState.events = events
@@ -134,7 +115,7 @@ export function step_state(state, interactive_mode) {
   }
   // if (state.step_no < state.scenario_max_length) // Take this out for now, as it overlaps with MAX_DAYS handling in main.js
   state.step_no++;
-  step_epidemic(state.country, state.regions, state.measures, state.covid_pars, 0.01);
+  step_epidemic(state.country, state.regions, state.measures, state.covid_pars, state.travel_model);
   
 }
 

@@ -155,6 +155,9 @@ class DynParameters {
         this.bck_rate = { value: 0.5, def: 0.5, desc: "Average number of infected coming into each region per day from outside the country." }
         this.bck_rate_m = { value: 0., def: 0., desc: "Average number of mutant infected coming into each region per day from outside the country." }
 
+        this.season_start = 0 // The number in the scenario relative to which seasonality is calculated
+        // corresponds to the day of highest R0
+
         // Death model
         this.hospital_capacity = { value: 0.001, def: 0.001, desc: "ICU capacity as a fraction of population." }
         this.death_rate_1 = { value: 0.01, def: 0.01, desc: "Fraction of deaths for people within hospital capactity." }
@@ -475,32 +478,33 @@ function local_step(reg, country, dyn_pars, cm, mu_mult) {
 
 
 
-function step_epidemic(country, regions, cm, dyn_pars, travel) {
+function step_epidemic(country, regions, cm, dyn_pars, travel_model) {
 
     country.ratio_vac += dyn_pars.vac_rate.value // Vaccinate some people...
     if (country.ratio_vac > 1.) {country.ratio_vac = 1.} // ... but not more than all people.
 
     // console.log(country.ratio_vac)
 
-    // travel is the fraction of people from a region that travel to a neighbouring region
-    // in our first approximation these are simply all regions within 100km and travel is a constant fraction.
-    // these people cause infections at the place they travel to as well as at home.
-
     let now = regions[0].S.length - 1;
 
     for (let reg of regions) {
-
         reg.travel_I = 0
         reg.travel_Im = 0
-        for (let nei of reg.neighbours) {
-            if (nei.dist < 100 && reg != regions[nei.index]) {
-                reg.travel_I += Math.round(travel * regions[nei.index].I[now])
-                reg.travel_Im += Math.round(travel * regions[nei.index].Im[now])
-            }
-        }
     }
 
-    let mu_mult = measure_effect(cm)
+    for (let trav of travel_model) {
+        let I_here_now = regions[trav["index"]].I[now]
+        let Im_here_now = regions[trav["index"]].Im[now]
+        for (let i = 0; i++; i < length(regions)) {
+            regions[i].travel_I += 3 * I_here_now * trav["travel"][i]
+            regions[i].travel_Im += 3 * Im_here_now * trav["travel"][i]
+            }
+        }    // The 3 here arises from a fudge factor from the travel model. Essentially the issue is
+        // that in the model in some few regions there are more trips than people.
+        // Thus the travel is scaled down by a factor of 6. That looks to weak though.
+
+    // Seasonality and counter measures:
+    let mu_mult = measure_effect(cm) * (0.8  + 0.4 * Math.cos(2 * Math.PI * (now - dyn_pars.season_start) / 365))
     let d = 0
     let impact = 0
     let delta_E = 0
@@ -672,7 +676,6 @@ function seven_d_incidence(reg) {
     let c = 0, s_o = 0, s_m = 0
     for (let i = reg.I.length - 3; i >= 0; i--) {
         c++;
-        // s += ((reg.I[i] + reg.Im[i] + reg.E[i] + reg.Em[i]) / reg.total) * 100000;
         s_o += reg.delta_I[i];
         s_m += reg.delta_Im[i];
 
@@ -737,7 +740,7 @@ function self_test() {
     for (let n = 0; n < 150; n++) {
         log_country(country)
 
-        step_epidemic(country, Regions, c_meas, dyn_pars, 0.01)
+        step_epidemic(country, Regions, c_meas, dyn_pars, [])
     }
 
     console.log("Starting test and trace program")
@@ -746,7 +749,7 @@ function self_test() {
     for (let n = 0; n < 15; n++) {
         log_country(country)
 
-        step_epidemic(country, Regions, c_meas, dyn_pars, 0.01)
+        step_epidemic(country, Regions, c_meas, dyn_pars, [])
     }
     console.log("Switching on all counter measures")
 
@@ -762,7 +765,7 @@ function self_test() {
     for (let n = 0; n < 25; n++) {
         log_country(country)
 
-        step_epidemic(country, Regions, c_meas, dyn_pars, 0.01)
+        step_epidemic(country, Regions, c_meas, dyn_pars, [])
     }
     log_country(country)
     log_country(country)
@@ -987,6 +990,7 @@ function changeParams(id, value) {
 
 d3.queue()
   .defer(d3.json, "data/RKI_Corona_Landkreise.geojson")
+  .defer(d3.json, "data/travel_model.json")
   .await(start_sim);
 
 let timelineChart = null;
@@ -1015,7 +1019,7 @@ function coreLoop(state) {
   // and state would continue to reference the old global...
 };
 
-function start_sim(error, data) {
+function start_sim(error, LK_data, travel_model) {
   // init_state_inc(gState, data);
   // init_state_0(gState, data);
 
@@ -1026,7 +1030,7 @@ function start_sim(error, data) {
     $('#chart_selector')[0], gState, timelineChart
   );
   scenarioSelector = new _scenario_selector__WEBPACK_IMPORTED_MODULE_5__.default(
-    $('#scenario_selector')[0], gState, data, clickResetButton);
+    $('#scenario_selector')[0], gState, [LK_data, travel_model], clickResetButton);
 
   mapPlot = new _map_plot__WEBPACK_IMPORTED_MODULE_1__.default($('#mapPlot')[0], gState.topo, gState);
   mapPlot.draw();
@@ -1289,6 +1293,7 @@ class State {
     this.events = []
     this.messages = []
     this.topo = []
+    this.travel_model = []
     this.scenario_max_length = 200
     this.start_no = 0; // scenario_start
 
@@ -1298,20 +1303,22 @@ class State {
 // Initializing from the RKI Data in geojson format using only population numbers and 7 day incidence.
 
 function init_state_inc(gState, data) {
-  data.features.forEach(e => {
+  let LK_data = data[0]
+  let travel_model = data[1]
+  LK_data.features.forEach(e => {
     let r = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.region_with_incidence)(e.properties.EWZ, e.properties.cases7_per_100k, e.properties.AGS, e.properties.GEN)
-    // for distance between regions
-    // two passes to prevent expensive recalculation
-    r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
+    // // for distance between regions
+    // // two passes to prevent expensive recalculation
+    // r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
     gState.regions.push(r);
   });
 
-  // second pass ... finish up distance calculations
-  gState.regions.forEach((src_r) => {
-    gState.regions.forEach((dst_r, i) => {
-      src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
-    });
-  });
+  // // second pass ... finish up distance calculations
+  // gState.regions.forEach((src_r) => {
+  //   gState.regions.forEach((dst_r, i) => {
+  //     src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
+  //   });
+  // });
 
   gState.start_no = 7
 
@@ -1319,52 +1326,29 @@ function init_state_inc(gState, data) {
     (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.none_step_epidemic)(gState.country, gState.regions, gState.measures, gState.covid_pars);
   }
 
-
-
-  gState.topo = data;
+  gState.topo = LK_data;
+  gState.travel_model = travel_model;
   gState.country.total = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.count)((reg) => reg.total, gState.regions)
 }
 
 function init_state_0(gState, data) {
-  data.features.forEach(e => {
+  let LK_data = data[0]
+  let travel_model = data[1]
+
+  LK_data.features.forEach(e => {
     let r = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.region_with_incidence)(e.properties.EWZ, 0, e.properties.AGS, e.properties.GEN)
-    // for distance between regions
-    // two passes to prevent expensive recalculation
-    r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
     gState.regions.push(r);
   });
 
-  // second pass ... finish up distance calculations
-  gState.regions.forEach((src_r) => {
-    gState.regions.forEach((dst_r, i) => {
-      src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
-    });
-  });
-
-  gState.topo = data;
+  gState.topo = LK_data;
+  gState.travel_model = travel_model;
   gState.country.total = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.count)((reg) => reg.total, gState.regions)
 }
 
 // Inital state for 2 years of Covid
 
 function init_state_2y(gState, data) {
-  data.features.forEach(e => {
-    let r = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.region_with_incidence)(e.properties.EWZ, 0, e.properties.AGS, e.properties.GEN)
-    // for distance between regions
-    // two passes to prevent expensive recalculation
-    r.centerOfMass = turf.centerOfMass(e.geometry).geometry.coordinates;
-    gState.regions.push(r);
-  });
-
-  // second pass ... finish up distance calculations
-  gState.regions.forEach((src_r) => {
-    gState.regions.forEach((dst_r, i) => {
-      src_r.neighbours.push({ index: i, dist: turf.distance(src_r.centerOfMass, dst_r.centerOfMass) });
-    });
-  });
-
-  gState.topo = data;
-  gState.country.total = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.count)((reg) => reg.total, gState.regions);
+  init_state_0(gState, data);
 
   gState.scenario_max_length = 365 * 2;
   gState.start_no = 0;
@@ -1385,6 +1369,7 @@ function init_state_2y(gState, data) {
 
 function init_state_random(gState, events){
   // Initialize a baseline scenario without any covid.
+  // only use for testing, can't be plotted!
   gState.regions = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.init_random_regions)()
   gState.country.total = (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.count)((reg) => reg.total, gState.regions)
   gState.events = events
@@ -1399,7 +1384,7 @@ function step_state(state, interactive_mode) {
   }
   // if (state.step_no < state.scenario_max_length) // Take this out for now, as it overlaps with MAX_DAYS handling in main.js
   state.step_no++;
-  (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.step_epidemic)(state.country, state.regions, state.measures, state.covid_pars, 0.01);
+  (0,_game_engine__WEBPACK_IMPORTED_MODULE_0__.step_epidemic)(state.country, state.regions, state.measures, state.covid_pars, state.travel_model);
   
 }
 
@@ -1819,4 +1804,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.3a115134a11815ee0f28.js.map
+//# sourceMappingURL=bundle.6790f66b7fe5cf08b66f.js.map
