@@ -495,8 +495,8 @@ function step_epidemic(country, regions, cm, dyn_pars, travel_model) {
         let I_here_now = regions[trav["index"]].I[now]
         let Im_here_now = regions[trav["index"]].Im[now]
         for (let [i, reg] of regions.entries()) {
-            reg.travel_I += 3 * I_here_now * trav["travel"][i]
-            reg.travel_Im += 3 * Im_here_now * trav["travel"][i]
+            reg.travel_I += 6 * I_here_now * trav["travel"][i]
+            reg.travel_Im += 6 * Im_here_now * trav["travel"][i]
             }
         }
         // The 3 here arises from a fudge factor from the travel model. Essentially the issue is
@@ -1810,4 +1810,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.a92f387b5a7d93b9da69.js.map
+//# sourceMappingURL=bundle.7dbef226628692e57c1d.js.map
