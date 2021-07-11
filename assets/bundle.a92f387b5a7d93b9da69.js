@@ -144,15 +144,15 @@ class DynParameters {
         // The parameters of the disease and the vaccination campaign
 
         // Disease dynamics
-        this.mu = { value: 3, def: 3, desc: "Base R0: Number of people an infected infects on average." }
-        this.mu_m = { value: 4.5, def: 4.5, desc: "Base R0 for Mutant: Number of people someone infected by the mutant infects on average." }
+        this.mu = { value: 3, def: 3, desc: "Base R rate: Number of people an infected infects on average." }
+        this.mu_m = { value: 4.5, def: 4.5, desc: "Base R rate for Mutant: Number of people someone infected by the mutant infects on average." }
         this.I_to_R = { value: 0.2, def: 0.2, desc: "Daily rate of end of infectiousness (leading to recovery or death)." }
         this.E_to_I = { value: 0.4, def: 0.4, desc: "Daily rate of infection breaking out among those carrying the virus (they become infectious for others)." }
         this.k = { value: 0.1, def: 0.1, desc: "Overdispersion: Not everyone infects exactly R0 people, this parameter controls how much the number of infected varies from person to person." }
         this.vac_rate = { value: 0., def: 0., desc: "Fraction of population vaccinated per day." }
-        this.vac_eff = { value: 0.8, def: 0.8, desc: "Fraction of infections prevented by vaccination." }
+        this.vac_eff = { value: 0.9, def: 0.9, desc: "Fraction of infections prevented by vaccination." }
         this.tti_capacity = { value: 0.0002, def: 0.0002, desc: "Trace capacity as fraction of total local population." }
-        this.bck_rate = { value: 0.5, def: 0.5, desc: "Average number of infected coming into each region per day from outside the country." }
+        this.bck_rate = { value: 0, def: 0, desc: "Average number of infected coming into each region per day from outside the country." }
         this.bck_rate_m = { value: 0., def: 0., desc: "Average number of mutant infected coming into each region per day from outside the country." }
 
         this.season_start = 0 // The number in the scenario relative to which seasonality is calculated
@@ -161,7 +161,7 @@ class DynParameters {
         // Death model
         this.hospital_capacity = { value: 0.001, def: 0.001, desc: "ICU capacity as a fraction of population." }
         this.death_rate_1 = { value: 0.01, def: 0.01, desc: "Fraction of deaths for people within hospital capactity." }
-        this.death_rate_2 = { value: 0.05, def: 0.05, desc: "Fraction of deaths for people beyond hospital capactity." }
+        this.death_rate_2 = { value: 0.02, def: 0.02, desc: "Fraction of deaths for people beyond hospital capactity." }
         this.vulnerable = { value: 0.2, def: 0.2, desc: "Fraction of vulnerable in the population." }
         this.non_vul_dr = { value: 0.1, def: 0.1, desc: "Rate of serious complications/deaths among non-vulnerable population relative to overall population (this modifier gradually kicks in as the vulnerable get vaccinated)." }
     }
@@ -180,11 +180,11 @@ function deaths(dyn_pars, I, v_rate, delta_R, N_total) {
         base_dr = hos * dyn_pars.death_rate_1.value + (1 - hos) * dyn_pars.death_rate_2.value
     }
 
-    // We assume that once the vulnerable are infected mortality will be much lower
+    // We assume that once the vulnerable are vaccinated mortality will be much lower
     if (v_rate > dyn_pars.vulnerable.value) { dr = base_dr * dyn_pars.non_vul_dr.value }
     else { dr = ((1 - v_rate) + v_rate * dyn_pars.non_vul_dr.value) * base_dr }
 
-    return prob_round(dr * delta_R)
+    return prob_round(dr * delta_R) // death rate is calculated as fraction of people going I -> R
 }
 
 class DerivedProps {
@@ -273,7 +273,6 @@ function get_deltas(E, I, I_travel, E_to_I, I_to_R, mu, k, v, background) {
     let mu_d = mu / d_infect
     let r = 1 / k
     let p = mu_d / (r + mu_d)
-
     let I_eff = (1 - v) * (I + I_travel) + background
     let size = prob_round(r * I_eff)
     delta_E = neg_binom(size, p)
@@ -495,11 +494,12 @@ function step_epidemic(country, regions, cm, dyn_pars, travel_model) {
     for (let trav of travel_model) {
         let I_here_now = regions[trav["index"]].I[now]
         let Im_here_now = regions[trav["index"]].Im[now]
-        for (let i = 0; i++; i < length(regions)) {
-            regions[i].travel_I += 3 * I_here_now * trav["travel"][i]
-            regions[i].travel_Im += 3 * Im_here_now * trav["travel"][i]
+        for (let [i, reg] of regions.entries()) {
+            reg.travel_I += 3 * I_here_now * trav["travel"][i]
+            reg.travel_Im += 3 * Im_here_now * trav["travel"][i]
             }
-        }    // The 3 here arises from a fudge factor from the travel model. Essentially the issue is
+        }
+        // The 3 here arises from a fudge factor from the travel model. Essentially the issue is
         // that in the model in some few regions there are more trips than people.
         // Thus the travel is scaled down by a factor of 6. That looks to weak though.
 
@@ -1355,9 +1355,15 @@ function init_state_2y(gState, data) {
 
 
   gState.events = [
-    new ToggleTTIEvent(15, "Starting Test Trace and Isolate Program."),
-    new SetCMLevelEvent(20, 3, "Taking some counter measures."),
-    new ToggleHL20Event(50, "Hard lockdown for >20 in effect."),
+    new DynParEvent(1, "bck_rate", 0.001, "January 1st, novel virus reported."),
+    new DynParEvent(20, "bck_rate", 0.005, "January 20th, infected people have started travelling into the country in significant numbers."),
+    new ToggleTTIEvent(30, "Starting Trace and Isolate Program focusing on people coming in from affected regions."),
+    new DynParEvent(31+24, "bck_rate", 0.1, "February 24th, the virus is spreading through neighbouring countries, full blown arrival here is only a matter of time now."),
+    new SetCMLevelEvent(31+26, 1, "First counter measures are taken. Initial focus is to slow down the virus until more is known."),
+    new SetCMLevelEvent(31+30, 2, "As cases continue to rise measures are intensified."),
+    new SetCMLevelEvent(31+30+10, 3, "As cases continue to rise measures are intensified."),
+    new SetCMLevelEvent(31+30+20, 4, "20th of March, a a strong set of measures is taken."),
+    new ToggleHL20Event(180, "Hard lockdown for >20 in effect."),
     new DynParEvent(365, "bck_rate_m", 5., "January 1st, B.1.1.7 mutation appears among travelers coming into Germany."),
     new DynParEvent(380, "vac_rate", 0.001, "Vaccinations starting slowly."),
     new SetCMLevelEvent(400, 4, "Increasing counter measures."),
@@ -1804,4 +1810,4 @@ class TimelineChart {
 /******/ 	// This entry module used 'exports' so it can't be inlined
 /******/ })()
 ;
-//# sourceMappingURL=bundle.6790f66b7fe5cf08b66f.js.map
+//# sourceMappingURL=bundle.a92f387b5a7d93b9da69.js.map

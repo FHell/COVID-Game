@@ -86,9 +86,15 @@ export function init_state_2y(gState, data) {
 
 
   gState.events = [
-    new ToggleTTIEvent(15, "Starting Test Trace and Isolate Program."),
-    new SetCMLevelEvent(20, 3, "Taking some counter measures."),
-    new ToggleHL20Event(50, "Hard lockdown for >20 in effect."),
+    new DynParEvent(1, "bck_rate", 0.001, "January 1st, novel virus reported."),
+    new DynParEvent(20, "bck_rate", 0.005, "January 20th, infected people have started travelling into the country in significant numbers."),
+    new ToggleTTIEvent(30, "Starting Trace and Isolate Program focusing on people coming in from affected regions."),
+    new DynParEvent(31+24, "bck_rate", 0.1, "February 24th, the virus is spreading through neighbouring countries, full blown arrival here is only a matter of time now."),
+    new SetCMLevelEvent(31+26, 1, "First counter measures are taken. Initial focus is to slow down the virus until more is known."),
+    new SetCMLevelEvent(31+30, 2, "As cases continue to rise measures are intensified."),
+    new SetCMLevelEvent(31+30+10, 3, "As cases continue to rise measures are intensified."),
+    new SetCMLevelEvent(31+30+20, 4, "20th of March, a a strong set of measures is taken."),
+    new ToggleHL20Event(180, "Hard lockdown for >20 in effect."),
     new DynParEvent(365, "bck_rate_m", 5., "January 1st, B.1.1.7 mutation appears among travelers coming into Germany."),
     new DynParEvent(380, "vac_rate", 0.001, "Vaccinations starting slowly."),
     new SetCMLevelEvent(400, 4, "Increasing counter measures."),
